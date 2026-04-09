@@ -1,0 +1,526 @@
+# Nexora Feature Documentation
+
+## Product Overview
+
+Nexora is a simple, trusted, and location-aware OJT tracking system for practicum students, teachers, and school administrators. Its core purpose is to make student attendance logging seamless while ensuring that time records are valid through geolocation and photo verification.
+
+Nexora removes unnecessary approval friction by using system-enforced validation. If a student is within the allowed workplace radius and completes the required verification steps, the log is accepted automatically.
+
+## Product Vision
+
+Build an OJT tracking platform that is:
+
+* easy for students to use daily
+* reliable for teachers and coordinators to monitor
+* difficult to abuse or falsify
+* clean, mobile-friendly, and fast
+
+## Core Product Principles
+
+1. Simplicity first
+   Students should be able to complete attendance in a few taps.
+
+2. Trust by system design
+   The system should verify attendance automatically instead of relying on manual approval.
+
+3. Low admin friction
+   Teachers should monitor, review, and report, not approve every single entry.
+
+4. Mobile-first experience
+   Students will likely use phones while on-site, so workflows must be optimized for mobile.
+
+5. Clear accountability
+   Every attendance record should contain time, location, and proof.
+
+## User Roles
+
+### 1. Student
+
+Primary user who logs attendance, submits daily activity, and tracks required hours.
+
+### 2. Teacher / Coordinator / Admin
+
+Monitors student attendance, checks logs, reviews compliance, manages workplace assignments, and generates reports.
+
+## MVP Scope
+
+The MVP should focus only on the features necessary to make the system useful, trusted, and demo-ready.
+
+### Included in MVP
+
+* authentication
+* role-based access
+* student profile setup
+* workplace assignment
+* time in / time out
+* geolocation validation
+* selfie/photo verification
+* daily activity log
+* automatic hour computation
+* student progress tracker
+* admin monitoring dashboard
+* attendance history
+* basic reports
+
+### Excluded from MVP
+
+* manual approve/reject workflow
+* messaging/chat
+* payroll or stipend features
+* complex analytics
+* multi-school support
+* QR attendance system
+* push notifications
+* AI-based fraud detection
+
+## Main System Flow
+
+### Student Flow
+
+1. Student logs in.
+2. Student opens dashboard.
+3. System checks whether the student has an assigned workplace.
+4. Student taps Time In.
+5. System verifies geolocation against workplace radius.
+6. System requires photo capture.
+7. If valid, session starts.
+8. Student taps Time Out at the end of duty.
+9. System again verifies geolocation.
+10. System requires another photo.
+11. Student enters a short daily activity summary.
+12. System calculates rendered hours and stores the record.
+
+### Admin Flow
+
+1. Admin logs in.
+2. Admin views dashboard summary.
+3. Admin monitors students, workplace assignments, attendance status, and history.
+4. Admin reviews attendance records with time, location status, and photos.
+5. Admin generates summaries and exportable reports.
+
+## Feature Documentation
+
+## 1. Authentication and Access Control
+
+### Purpose
+
+Secure access and separate the experience for students and admins.
+
+### Features
+
+* email and password sign in
+* forgot password flow
+* role-based redirection after login
+* protected routes
+* session persistence
+
+### MVP Notes
+
+* only two roles for MVP: student and admin
+* registration can be restricted if school prefers admin-created accounts
+
+## 2. User Profiles
+
+### Student Profile Fields
+
+* full name
+* student ID
+* email
+* course/program
+* year level
+* section
+* required OJT hours
+* assigned company/workplace
+* assigned supervisor or coordinator
+* status: active, completed, inactive
+
+### Admin Profile Fields
+
+* full name
+* email
+* department
+* role title
+
+## 3. Workplace Assignment
+
+### Purpose
+
+Connect each student to the location where attendance is valid.
+
+### Features
+
+* assign student to a company or office
+* save official workplace name
+* save workplace address
+* save latitude and longitude
+* set allowed attendance radius in meters
+* assign start and end dates
+
+### Validation Rules
+
+* student cannot time in if no workplace is assigned
+* student cannot time in if current date is outside assignment period
+
+## 4. Geolocation Validation
+
+### Purpose
+
+Ensure attendance actions only happen when the student is physically near the assigned workplace.
+
+### Features
+
+* capture current device location on time in
+* capture current device location on time out
+* compare captured coordinates with assigned workplace coordinates
+* enforce radius rule
+* block action if outside allowed range
+
+### Recommended MVP Behavior
+
+* default radius: 100 meters, configurable by admin
+* show student a clear error when outside the allowed area
+* show current validation status before button press when possible
+
+### UX Messaging Examples
+
+* You are within your assigned workplace. You may continue.
+* You are too far from your assigned workplace to time in.
+* Location access is required to continue.
+
+## 5. Photo Verification
+
+### Purpose
+
+Provide visual proof tied to attendance events.
+
+### Features
+
+* require photo at time in
+* require photo at time out
+* upload and store image securely
+* attach image URLs to attendance record
+
+### MVP Rules
+
+* no photo, no time in
+* no photo, no time out
+* images should be compressed for performance
+* camera capture should be preferred on mobile
+
+## 6. Time Tracking Engine
+
+### Purpose
+
+Capture duty sessions accurately and compute rendered hours automatically.
+
+### Features
+
+* start session on successful time in
+* end session on successful time out
+* compute total worked time
+* display today’s status
+* prevent invalid sequences
+
+### Rules
+
+* cannot time out before timing in
+* cannot time in twice while session is active
+* one active session at a time
+* hours are auto-computed and not manually entered by student
+
+### Optional Business Rules
+
+* minimum duty duration threshold
+* maximum daily hours limit
+* grace period for minor GPS drift
+
+## 7. Daily Activity Log
+
+### Purpose
+
+Add meaningful context to each attendance record.
+
+### Features
+
+* required short text field after time out
+* optional character minimum
+* viewable by admin in attendance history
+
+### Suggested Prompt
+
+What tasks or activities did you complete today?
+
+### MVP Recommendation
+
+Keep this very simple. One text area only.
+
+## 8. Attendance Record History
+
+### Student View
+
+* date
+* time in
+* time out
+* total hours
+* location status
+* photo proof indicators
+* activity summary
+
+### Admin View
+
+* student name
+* assigned workplace
+* date
+* rendered hours
+* location pass/fail status
+* images
+* activity log
+
+## 9. Student Progress Tracker
+
+### Purpose
+
+Help students know how many required hours remain.
+
+### Features
+
+* total required hours
+* total completed hours
+* remaining hours
+* progress bar
+* completion percentage
+
+### UX Goal
+
+A student should immediately know whether they are on track.
+
+## 10. Admin Dashboard
+
+### Purpose
+
+Give coordinators a clear operational overview.
+
+### Recommended Dashboard Widgets
+
+* total students
+* active students today
+* timed in now
+* total completed interns
+* attendance logs today
+* students with missing logs
+* students outside assigned schedule
+
+### Main Admin Pages
+
+* dashboard overview
+* students
+* workplaces
+* attendance logs
+* reports
+* settings
+
+## 11. Student Dashboard
+
+### Recommended Sections
+
+* welcome card
+* today’s attendance status
+* time in/time out action area
+* location validation status
+* completed hours progress
+* recent attendance history
+* daily reminders or announcements
+
+## 12. Reporting
+
+### MVP Reports
+
+* attendance per student
+* total rendered hours per student
+* completed vs remaining hours
+* date-filtered attendance logs
+
+### Export Options
+
+* CSV export
+* printable summary view
+
+## 13. Announcements
+
+### Purpose
+
+Allow admins to post reminders and updates.
+
+### MVP Features
+
+* create announcement
+* set title and message
+* display active announcements on student dashboard
+
+## 14. Basic Auditability
+
+### Purpose
+
+Maintain trust in records without adding friction.
+
+### Track
+
+* created timestamp
+* location coordinates for time in and time out
+* image references
+* device/browser metadata if available
+
+## Recommended MVP UX Design
+
+### Student Experience Priorities
+
+* fast login
+* obvious buttons
+* one primary action at a time
+* mobile-first layout
+* low text input burden
+* clear feedback when blocked
+
+### Admin Experience Priorities
+
+* easy filtering
+* searchable student list
+* simple tables
+* useful status badges
+* report-friendly layout
+
+## Smart Product Decisions for Nexora
+
+### 1. No Manual Approval
+
+This is one of the strongest product decisions for Nexora.
+
+Why it is better:
+
+* removes bottlenecks
+* reduces teacher workload
+* makes attendance immediate and seamless
+* keeps the process objective
+
+### 2. Geofence as the Main Gatekeeper
+
+The system itself decides whether a log is valid.
+That makes Nexora more trustworthy and easier to operate.
+
+### 3. Photo Capture at Both Ends
+
+This strengthens verification while still keeping the process simple.
+
+### 4. Minimal Daily Log Input
+
+Too many fields will hurt adoption. Keep the daily narrative short.
+
+## Recommended Database Modules
+
+* users/profiles
+* students
+* admins
+* workplaces
+* assignments
+* attendance_sessions
+* announcements
+* system_settings
+
+## Suggested Attendance Session Fields
+
+* student_id
+* assignment_id
+* date
+* time_in_at
+* time_out_at
+* time_in_latitude
+* time_in_longitude
+* time_out_latitude
+* time_out_longitude
+* time_in_photo_url
+* time_out_photo_url
+* activity_summary
+* total_minutes
+* validation_status
+* created_at
+
+## Validation Status Design
+
+For MVP, keep statuses simple:
+
+* valid
+* blocked
+* incomplete
+
+This is better than approve/reject because it reflects system outcome instead of admin judgment.
+
+## Non-Functional Requirements
+
+### Performance
+
+* attendance actions should feel instant
+* image upload should be optimized
+* dashboard pages should load quickly
+
+### Security
+
+* students can only access their own records
+* admins can access system-wide monitoring views
+* storage access should be protected
+* row-level security should be enforced in Supabase
+
+### Reliability
+
+* prevent duplicate submissions
+* gracefully handle GPS permission denial
+* gracefully handle photo upload failure
+
+### Usability
+
+* responsive on mobile and desktop
+* clear language
+* low cognitive load
+
+## Best MVP Version of Nexora
+
+If the goal is the best first version, the MVP should be:
+
+* simple enough for daily use
+* strict enough to build trust
+* polished enough to impress during presentation
+
+### Final MVP Feature Set
+
+1. login and authentication
+2. student and admin roles
+3. student assignment to workplace
+4. time in with geolocation and photo
+5. time out with geolocation and photo
+6. short daily activity summary
+7. automatic rendered hours calculation
+8. student progress tracker
+9. attendance history
+10. admin monitoring dashboard
+11. student management
+12. workplace management
+13. announcements
+14. basic reporting and export
+
+## Future Enhancements After MVP
+
+* map view for attendance logs
+* suspicious activity flagging
+* notifications and reminders
+* supervisor role
+* file requirements upload
+* internship evaluation forms
+* late/absence analytics
+* biometric or anti-spoof checks
+* offline capture with later sync
+
+## Product Positioning Statement
+
+Nexora is a trusted OJT tracking system that uses time, location, and photo verification to make practicum attendance simple for students and reliable for schools.
+
+## Short Thesis-Friendly Description
+A role-based OJT tracking and monitoring system that helps schools assign students, advisers, and offices while enabling students to log daily attendance and teachers to monitor performance and progress.
