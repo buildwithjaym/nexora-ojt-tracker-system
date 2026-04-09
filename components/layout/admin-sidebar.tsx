@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import clsx from "clsx";
+import { toast } from "sonner";
 import {
   BarChart3,
   Building2,
@@ -12,10 +14,14 @@ import {
   LayoutDashboard,
   Layers3,
   LifeBuoy,
+  LogOut,
+  Menu,
   Settings,
   Sparkles,
   Users,
+  X,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   {
@@ -60,13 +66,21 @@ const navItems = [
   },
 ];
 
-export function AdminSidebar() {
-  const pathname = usePathname();
-
+function SidebarContent({
+  pathname,
+  onNavigate,
+  onLogout,
+  isLoggingOut,
+}: {
+  pathname: string;
+  onNavigate?: () => void;
+  onLogout: () => void;
+  isLoggingOut: boolean;
+}) {
   return (
-    <aside className="sticky top-0 flex h-screen w-72 flex-col border-r border-border bg-card/80 px-4 py-5 backdrop-blur-xl">
-      <div className="mb-6 rounded-[28px] border border-white/10 bg-background/70 p-4 shadow-lg shadow-black/10">
-        <Link href="/admin" className="flex items-center gap-3">
+    <div className="flex h-full flex-col">
+      <div className="mb-5 rounded-[28px] border border-white/10 bg-background/70 p-4 shadow-lg shadow-black/10">
+        <Link href="/admin" className="flex items-center gap-3" onClick={onNavigate}>
           <div className="relative h-12 w-12 overflow-hidden rounded-2xl ring-1 ring-white/10">
             <Image
               src="/Nexora.png"
@@ -103,6 +117,7 @@ export function AdminSidebar() {
             <Link
               key={item.label}
               href={item.href}
+              onClick={onNavigate}
               className={clsx(
                 "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 isActive
@@ -137,7 +152,10 @@ export function AdminSidebar() {
               <p className="mt-1 text-xs leading-6 text-muted-foreground">
                 Keep your OJT operations organized with a cleaner admin workflow.
               </p>
-              <button className="mt-3 inline-flex rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition hover:bg-secondary">
+              <button
+                type="button"
+                className="mt-3 inline-flex rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition hover:bg-secondary"
+              >
                 Contact Support
               </button>
             </div>
@@ -149,8 +167,138 @@ export function AdminSidebar() {
           <p className="mt-1 text-xs text-muted-foreground">
             Super Administrator
           </p>
+
+          <button
+            type="button"
+            onClick={onLogout}
+            disabled={isLoggingOut}
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <LogOut className="h-4 w-4" />
+            {isLoggingOut ? "Signing out..." : "Logout"}
+          </button>
         </div>
       </div>
-    </aside>
+    </div>
+  );
+}
+
+export function AdminSidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+
+    const loadingToast = toast.loading("Signing out...", {
+      description: "Please wait a moment.",
+    });
+
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        toast.dismiss(loadingToast);
+        toast.error("Logout failed", {
+          description: error.message || "Unable to sign out right now.",
+        });
+        setIsLoggingOut(false);
+        return;
+      }
+
+      toast.dismiss(loadingToast);
+      toast.success("Signed out", {
+        description: "You have been logged out successfully.",
+      });
+
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.dismiss(loadingToast);
+      toast.error("Something went wrong", {
+        description: "An unexpected error occurred while signing out.",
+      });
+    } finally {
+      setIsLoggingOut(false);
+      setMobileOpen(false);
+    }
+  }
+
+  return (
+    <>
+      {/* Mobile Top Bar */}
+      <div className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl lg:hidden">
+        <Link href="/admin" className="flex items-center gap-3">
+          <div className="relative h-10 w-10 overflow-hidden rounded-2xl ring-1 ring-white/10">
+            <Image
+              src="/Nexora.png"
+              alt="Nexora logo"
+              fill
+              className="object-cover"
+              sizes="40px"
+            />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Nexora</p>
+            <p className="text-[11px] text-muted-foreground">Admin Panel</p>
+          </div>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground transition hover:bg-secondary"
+          aria-label="Open sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* Desktop Sidebar */}
+      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-border bg-card/80 px-4 py-5 backdrop-blur-xl lg:flex">
+        <SidebarContent
+          pathname={pathname}
+          onLogout={handleLogout}
+          isLoggingOut={isLoggingOut}
+        />
+      </aside>
+
+      {/* Mobile Overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close sidebar overlay"
+          />
+
+          <aside className="absolute left-0 top-0 flex h-full w-[88%] max-w-[320px] flex-col border-r border-border bg-card/95 px-4 py-5 shadow-2xl backdrop-blur-xl">
+            <div className="mb-4 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-foreground transition hover:bg-secondary"
+                aria-label="Close sidebar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <SidebarContent
+              pathname={pathname}
+              onNavigate={() => setMobileOpen(false)}
+              onLogout={handleLogout}
+              isLoggingOut={isLoggingOut}
+            />
+          </aside>
+        </div>
+      )}
+    </>
   );
 }

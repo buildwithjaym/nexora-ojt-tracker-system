@@ -13,7 +13,7 @@ export default function AdminLayout({
         <AdminSidebar />
 
         <div className="flex min-h-screen flex-1 flex-col">
-          <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
+          <header className="sticky top-0 z-30 hidden border-b border-border bg-background/80 backdrop-blur-xl lg:block">
             <div className="flex h-20 items-center justify-between px-6 lg:px-8">
               <div>
                 <p className="text-sm text-muted-foreground">Admin Panel</p>
@@ -52,7 +52,9 @@ export default function AdminLayout({
             </div>
           </header>
 
-          <main className="flex-1 px-6 py-6 lg:px-8">{children}</main>
+          <main className="flex-1 px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
+            {children}
+          </main>
         </div>
       </div>
     </div>
