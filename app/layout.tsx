@@ -1,12 +1,22 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
 });
-
+<Toaster
+  position="top-right"
+  richColors
+  closeButton
+  toastOptions={{
+    classNames: {
+      toast: "rounded-2xl",
+    },
+  }}
+/>
 export const metadata: Metadata = {
   metadataBase: new URL("https://nexora.app"),
   title: {

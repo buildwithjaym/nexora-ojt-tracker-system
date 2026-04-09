@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock3,
-  GraduationCap,
   HelpCircle,
   MapPinned,
   ShieldCheck,
@@ -24,7 +23,7 @@ const fadeUp = {
   initial: { opacity: 0, y: 18 },
   whileInView: { opacity: 1, y: 0 },
   viewport: { once: true, amount: 0.2 },
-  transition: { duration: 0.55, ease: "easeOut" },
+  transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as const },
 };
 
 const benefits = [
@@ -32,88 +31,88 @@ const benefits = [
     icon: ShieldCheck,
     title: "Trusted attendance records",
     description:
-      "Nexora helps schools build confidence in OJT tracking through structured logs, guided workflows, and accountability-first design.",
+      "Build stronger confidence in OJT tracking with a system designed for accountability, consistency, and cleaner validation.",
   },
   {
     icon: Clock3,
     title: "Less manual follow-up",
     description:
-      "Reduce repetitive checking, scattered records, and unclear submissions with one organized system for daily OJT activity.",
+      "Reduce repetitive checking, scattered logs, and unclear records with one organized workflow for daily practicum tracking.",
   },
   {
     icon: CalendarCheck2,
     title: "Clear progress visibility",
     description:
-      "Give students and advisers a better view of attendance, completed hours, and day-by-day OJT activity in one place.",
+      "Give students, advisers, and administrators a better way to see attendance, hours completed, and day-by-day practicum activity.",
   },
   {
     icon: Users2,
     title: "Better coordination",
     description:
-      "Keep students, advisers, and administrators aligned with a cleaner process from assignment to completion.",
+      "Keep institutions, teachers, and students aligned through a more structured and dependable monitoring experience.",
   },
   {
     icon: MapPinned,
-    title: "Built for reliable monitoring",
+    title: "Reliable monitoring",
     description:
-      "Designed to support location-aware tracking, checkpoint validation, and more dependable practicum oversight.",
+      "Support location-aware attendance, checkpoint validation, and a more dependable way to monitor on-site practicum activity.",
   },
   {
     icon: WalletCards,
-    title: "School-ready simplicity",
+    title: "Easy to adopt",
     description:
-      "Nexora is made to feel easy for students and practical for institutions, without unnecessary complexity.",
+      "Nexora is designed to feel simple for students and practical for institutions without adding unnecessary complexity.",
   },
 ];
 
 const steps = [
   {
     step: "01",
-    title: "Set up your OJT program",
+    title: "Set up your practicum structure",
     description:
-      "Organize students, advisers, offices, batches, and required hours with a structure that is easy to maintain.",
+      "Organize students, advisers, offices, batches, and required hours in one clear system that is easier to manage.",
   },
   {
     step: "02",
     title: "Track attendance with clarity",
     description:
-      "Students record their daily OJT checkpoints while the system keeps the process guided, consistent, and easy to follow.",
+      "Students record their daily checkpoints while the system keeps attendance guided, structured, and easier to trust.",
   },
   {
     step: "03",
-    title: "Monitor progress with confidence",
+    title: "Monitor progress confidently",
     description:
-      "Teachers and coordinators gain a cleaner view of attendance, progress, and student activity without relying on scattered tools.",
+      "Teachers and institutions gain a cleaner view of attendance, progress, and student activity without relying on scattered tools.",
   },
 ];
 
 const highlights = [
   "Cleaner OJT management for institutions",
-  "More confidence in student attendance records",
-  "Faster monitoring for teachers and advisers",
-  "A simpler daily experience for practicum students",
+  "Better visibility for advisers and coordinators",
+  "A simpler daily experience for students",
+  "More confidence in attendance and progress records",
 ];
 
 const faqs = [
   {
     question: "Who is Nexora built for?",
     answer:
-      "Nexora is designed for schools, colleges, coordinators, advisers, and practicum students who want a more reliable and organized way to manage OJT tracking.",
+      "Nexora is designed for schools, colleges, coordinators, advisers, and practicum students who need a cleaner and more reliable way to manage OJT tracking.",
   },
   {
     question: "What problem does Nexora solve?",
     answer:
-      "It reduces the confusion of manual attendance tracking, scattered student records, and inconsistent practicum monitoring by bringing everything into one focused platform.",
+      "It helps reduce the confusion of manual attendance tracking, disconnected records, and inconsistent practicum monitoring by bringing everything into one focused platform.",
   },
   {
     question: "Is Nexora only for students?",
     answer:
-      "No. Nexora is built for the full OJT process. Students use it to track records and progress, while teachers and administrators use it to monitor and manage the program.",
+      "No. Nexora supports the full OJT workflow. Students use it to manage records and progress, while advisers and administrators use it to monitor and coordinate the program.",
   },
   {
-    question: "Why is Nexora different from generic attendance systems?",
+    question: "Why is Nexora different from generic attendance tools?",
     answer:
-      "Nexora is designed specifically for OJT and practicum workflows. It focuses on assignments, required hours, progress visibility, attendance structure, and school-friendly monitoring.",
+      "Nexora is built specifically for OJT and practicum operations. It focuses on progress visibility, attendance structure, coordination, and institution-friendly monitoring.",
   },
 ];
 
@@ -127,15 +126,15 @@ function SectionHeading({
   description: string;
 }) {
   return (
-    <div className="mx-auto max-w-3xl text-center">
-      <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.2em] text-primary">
+    <div className="mx-auto max-w-2xl text-center">
+      <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
         <Sparkles className="h-3.5 w-3.5" />
         {eyebrow}
       </div>
-      <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+      <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
         {title}
       </h2>
-      <p className="mt-4 text-base leading-7 text-muted-foreground sm:text-lg">
+      <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base">
         {description}
       </p>
     </div>
@@ -144,7 +143,7 @@ function SectionHeading({
 
 function AnimatedProgress() {
   return (
-    <div className="rounded-[28px] border border-white/10 bg-card/90 p-6 shadow-[0_20px_80px_-20px_rgba(37,99,235,0.35)] backdrop-blur">
+    <div className="rounded-[28px] border border-white/10 bg-card/90 p-5 shadow-[0_20px_80px_-20px_rgba(37,99,235,0.35)] backdrop-blur sm:p-6">
       <div className="flex items-center gap-3">
         <div className="relative h-11 w-11 overflow-hidden rounded-2xl ring-1 ring-white/10">
           <Image
@@ -163,7 +162,7 @@ function AnimatedProgress() {
         </div>
       </div>
 
-      <div className="mt-8 space-y-5">
+      <div className="mt-7 space-y-5">
         {[
           { label: "Clarity for students", value: "92%" },
           { label: "Efficiency for advisers", value: "88%" },
@@ -186,7 +185,7 @@ function AnimatedProgress() {
         ))}
       </div>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+      <div className="mt-7 grid gap-3 sm:grid-cols-2">
         {[
           "Easy to adopt",
           "Built for real OJT workflows",
@@ -208,29 +207,31 @@ function AnimatedProgress() {
 export default function HomePage() {
   return (
     <main className="relative overflow-x-hidden bg-background text-foreground">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.22),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(20,184,166,0.16),transparent_25%),radial-gradient(circle_at_bottom,rgba(37,99,235,0.10),transparent_30%)]" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.20),transparent_34%),radial-gradient(circle_at_78%_18%,rgba(20,184,166,0.14),transparent_24%),radial-gradient(circle_at_bottom,rgba(37,99,235,0.08),transparent_28%)]" />
 
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-18 max-w-7xl items-center justify-between px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
-            <div className="relative h-11 w-11 overflow-hidden rounded-2xl ring-1 ring-white/10">
+            <div className="relative h-10 w-10 overflow-hidden rounded-2xl ring-1 ring-white/10">
               <Image
                 src="/logo.png"
                 alt="Nexora logo"
                 fill
                 className="object-cover"
-                sizes="44px"
+                sizes="40px"
               />
             </div>
             <div>
-              <p className="text-base font-semibold tracking-tight">Nexora</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm font-semibold tracking-tight sm:text-base">
+                Nexora
+              </p>
+              <p className="text-[11px] text-muted-foreground sm:text-xs">
                 Trusted OJT Tracking System
               </p>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
+          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
             <a href="#benefits" className="transition hover:text-foreground">
               Benefits
             </a>
@@ -242,7 +243,7 @@ export default function HomePage() {
             </a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/login"
               className="hidden rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium transition hover:bg-secondary sm:inline-flex"
@@ -260,19 +261,19 @@ export default function HomePage() {
       </header>
 
       <section className="relative">
-        <div className="mx-auto grid min-h-[calc(100vh-72px)] max-w-7xl items-center gap-14 px-6 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:py-24">
+        <div className="mx-auto grid min-h-[calc(100vh-64px)] max-w-6xl items-center gap-10 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:py-24">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, ease: "easeOut" }}
-            className="max-w-3xl"
+            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-2xl"
           >
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
               <BadgeCheck className="h-4 w-4" />
               Built for institutions, advisers, and practicum students
             </div>
 
-            <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               A more
               <span className="bg-gradient-to-r from-primary via-blue-400 to-accent bg-clip-text text-transparent">
                 {" "}
@@ -281,17 +282,17 @@ export default function HomePage() {
               way to manage OJT tracking.
             </h1>
 
-            <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
-              Nexora helps schools organize OJT workflows with a cleaner system
-              for attendance, monitoring, progress tracking, and practicum
-              coordination — designed to be easy for students and reliable for
-              institutions.
+            <p className="mt-5 max-w-xl text-sm leading-7 text-muted-foreground sm:text-base sm:leading-8">
+              Nexora helps schools manage practicum workflows through a cleaner
+              experience for attendance, progress visibility, coordination, and
+              monitoring — built to feel easier for students and more reliable
+              for institutions.
             </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
                 href="/login"
-                className="inline-flex items-center rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:-translate-y-0.5 hover:opacity-95"
+                className="inline-flex items-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:-translate-y-0.5 hover:opacity-95"
               >
                 Start with Nexora
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -299,24 +300,26 @@ export default function HomePage() {
 
               <a
                 href="#benefits"
-                className="inline-flex items-center rounded-2xl border border-border bg-card px-6 py-3 text-sm font-semibold text-foreground transition hover:bg-secondary"
+                className="inline-flex items-center rounded-2xl border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-secondary"
               >
                 Discover the benefits
                 <ChevronRight className="ml-2 h-4 w-4" />
               </a>
             </div>
 
-            <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {[
-                "Designed for real OJT workflows",
-                "Made to feel simple every day",
-                "Built to improve trust and visibility",
+                "Built for real OJT workflows",
+                "Simple enough for everyday use",
+                "Designed to improve trust and visibility",
               ].map((item) => (
                 <div
                   key={item}
-                  className="rounded-3xl border border-border bg-card/80 p-5 shadow-lg shadow-black/10"
+                  className="rounded-3xl border border-border bg-card/80 p-4 shadow-lg shadow-black/10"
                 >
-                  <p className="text-sm leading-6 text-muted-foreground">{item}</p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    {item}
+                  </p>
                 </div>
               ))}
             </div>
@@ -325,37 +328,37 @@ export default function HomePage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 18 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
             className="relative"
           >
-            <div className="absolute -left-10 top-10 h-36 w-36 rounded-full bg-primary/20 blur-3xl" />
-            <div className="absolute -right-10 bottom-10 h-40 w-40 rounded-full bg-accent/20 blur-3xl" />
+            <div className="absolute -left-8 top-8 h-28 w-28 rounded-full bg-primary/20 blur-3xl sm:h-36 sm:w-36" />
+            <div className="absolute -right-8 bottom-8 h-32 w-32 rounded-full bg-accent/20 blur-3xl sm:h-40 sm:w-40" />
             <AnimatedProgress />
           </motion.div>
         </div>
       </section>
 
       <section className="border-y border-border/60 bg-card/40">
-        <div className="mx-auto grid max-w-7xl gap-6 px-6 py-6 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl gap-4 px-5 py-5 text-sm text-muted-foreground sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
           {highlights.map((item) => (
             <div key={item} className="flex items-center gap-3">
-              <CheckCircle2 className="h-4 w-4 text-accent" />
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-accent" />
               <span>{item}</span>
             </div>
           ))}
         </div>
       </section>
 
-      <section id="benefits" className="mx-auto max-w-7xl px-6 py-24">
+      <section id="benefits" className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-20">
         <motion.div {...fadeUp}>
           <SectionHeading
             eyebrow="Why Nexora"
             title="Give your institution a better OJT experience from the very first day"
-            description="Nexora is built to reduce friction, improve visibility, and make OJT management feel more structured, reliable, and easier to use."
+            description="Nexora is built to reduce friction, improve visibility, and make practicum management feel more structured, dependable, and easier to use."
           />
         </motion.div>
 
-        <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {benefits.map((benefit, index) => {
             const Icon = benefit.icon;
 
@@ -363,14 +366,18 @@ export default function HomePage() {
               <motion.div
                 key={benefit.title}
                 {...fadeUp}
-                transition={{ duration: 0.45, delay: index * 0.06 }}
+                transition={{
+                  duration: 0.45,
+                  delay: index * 0.06,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
                 whileHover={{ y: -6 }}
-                className="group rounded-[28px] border border-border bg-card p-7 shadow-lg shadow-black/10 transition"
+                className="group rounded-[28px] border border-border bg-card p-6 shadow-lg shadow-black/10 transition"
               >
                 <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20 transition group-hover:shadow-[0_0_30px_rgba(37,99,235,0.28)]">
                   <Icon className="h-6 w-6" />
                 </div>
-                <h3 className="text-xl font-semibold tracking-tight">
+                <h3 className="text-lg font-semibold tracking-tight">
                   {benefit.title}
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-muted-foreground">
@@ -382,27 +389,34 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="mx-auto max-w-7xl px-6 py-24">
+      <section
+        id="how-it-works"
+        className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-20"
+      >
         <motion.div {...fadeUp}>
           <SectionHeading
             eyebrow="How it works"
             title="Structured enough for institutions, simple enough for everyday use"
-            description="Nexora keeps the OJT process clearer from program setup to student tracking and ongoing monitoring."
+            description="Nexora keeps the practicum process clearer from setup to student tracking and ongoing monitoring."
           />
         </motion.div>
 
-        <div className="mt-14 grid gap-6 lg:grid-cols-3">
+        <div className="mt-12 grid gap-5 lg:grid-cols-3">
           {steps.map((item, index) => (
             <motion.div
               key={item.title}
               {...fadeUp}
-              transition={{ duration: 0.5, delay: index * 0.07 }}
-              className="rounded-[28px] border border-border bg-card p-7"
+              transition={{
+                duration: 0.5,
+                delay: index * 0.07,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="rounded-[28px] border border-border bg-card p-6"
             >
-              <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold tracking-wide text-primary w-fit">
+              <div className="w-fit rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold tracking-wide text-primary">
                 Step {item.step}
               </div>
-              <h3 className="mt-6 text-xl font-semibold">{item.title}</h3>
+              <h3 className="mt-5 text-lg font-semibold">{item.title}</h3>
               <p className="mt-3 text-sm leading-7 text-muted-foreground">
                 {item.description}
               </p>
@@ -411,44 +425,46 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-24">
+      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-20">
         <motion.div
           {...fadeUp}
-          className="overflow-hidden rounded-[36px] border border-primary/20 bg-gradient-to-br from-primary/12 via-card to-accent/10 p-8 shadow-[0_20px_80px_-20px_rgba(37,99,235,0.30)] sm:p-12"
+          className="overflow-hidden rounded-[32px] border border-primary/20 bg-gradient-to-br from-primary/12 via-card to-accent/10 p-6 shadow-[0_20px_80px_-20px_rgba(37,99,235,0.30)] sm:p-8 lg:p-10"
         >
-          <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
+          <div className="grid gap-8 lg:grid-cols-[1fr_0.9fr] lg:items-center">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1 text-xs font-medium text-primary">
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
                 <Star className="h-3.5 w-3.5" />
                 What schools gain with Nexora
               </div>
-              <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
+
+              <h2 className="mt-5 max-w-xl text-3xl font-bold tracking-tight sm:text-4xl">
                 More confidence, less confusion, and a better system for everyone involved.
               </h2>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-                Nexora helps institutions move away from fragmented processes and
-                toward a more organized, modern, and dependable way of managing
-                practicum operations.
+
+              <p className="mt-4 max-w-xl text-sm leading-7 text-muted-foreground sm:text-base">
+                Nexora helps institutions move away from fragmented processes
+                and toward a more organized, modern, and dependable way of
+                managing practicum operations.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-4">
+              <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   href="/login"
-                  className="inline-flex items-center rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:-translate-y-0.5"
+                  className="inline-flex items-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:-translate-y-0.5"
                 >
                   Launch Nexora
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
                 <a
                   href="#faqs"
-                  className="inline-flex items-center rounded-2xl border border-border bg-card px-6 py-3 text-sm font-semibold transition hover:bg-secondary"
+                  className="inline-flex items-center rounded-2xl border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-secondary"
                 >
                   Read FAQs
                 </a>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2">
               {[
                 "Cleaner attendance workflows",
                 "Stronger practicum visibility",
@@ -457,7 +473,7 @@ export default function HomePage() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="rounded-3xl border border-white/10 bg-background/70 p-5"
+                  className="rounded-3xl border border-white/10 bg-background/70 p-4"
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 rounded-full bg-accent/10 p-2 text-accent">
@@ -472,7 +488,7 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      <section id="faqs" className="mx-auto max-w-5xl px-6 py-24">
+      <section id="faqs" className="mx-auto max-w-4xl px-5 py-16 sm:px-6 sm:py-20">
         <motion.div {...fadeUp}>
           <SectionHeading
             eyebrow="FAQs"
@@ -481,24 +497,30 @@ export default function HomePage() {
           />
         </motion.div>
 
-        <div className="mt-14 space-y-4">
+        <div className="mt-12 space-y-4">
           {faqs.map((faq, index) => (
             <motion.details
               key={faq.question}
               {...fadeUp}
-              transition={{ duration: 0.45, delay: index * 0.05 }}
-              className="group rounded-[24px] border border-border bg-card p-6"
+              transition={{
+                duration: 0.45,
+                delay: index * 0.05,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="group rounded-[24px] border border-border bg-card p-5 sm:p-6"
             >
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left">
                 <div className="flex items-center gap-3">
                   <div className="rounded-xl bg-primary/10 p-2 text-primary">
                     <HelpCircle className="h-4 w-4" />
                   </div>
-                  <span className="text-base font-semibold">{faq.question}</span>
+                  <span className="text-sm font-semibold sm:text-base">
+                    {faq.question}
+                  </span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground transition group-open:rotate-90" />
+                <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition group-open:rotate-90" />
               </summary>
-              <p className="mt-4 pl-12 text-sm leading-7 text-muted-foreground">
+              <p className="mt-4 pl-11 text-sm leading-7 text-muted-foreground">
                 {faq.answer}
               </p>
             </motion.details>
@@ -507,7 +529,7 @@ export default function HomePage() {
       </section>
 
       <footer className="border-t border-border/70">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-3">
             <div className="relative h-9 w-9 overflow-hidden rounded-xl ring-1 ring-white/10">
               <Image

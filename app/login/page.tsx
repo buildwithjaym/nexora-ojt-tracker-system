@@ -2,11 +2,129 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const supabase = createClient();
+
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+  });
+
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!form.email.trim() || !form.password.trim()) {
+      toast.error("Missing credentials", {
+        description: "Please enter both your email and password.",
+      });
+      return;
+    }
+
+    if (!form.email.includes("@")) {
+      toast.error("Invalid email", {
+        description: "Please enter a valid email address.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const loadingToast = toast.loading("Signing you in...", {
+      description: "Please wait while we verify your credentials.",
+    });
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+
+      if (error) {
+        toast.dismiss(loadingToast);
+        toast.error("Login failed", {
+          description:
+            error.message || "Unable to sign in. Please check your credentials.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!data.user) {
+        toast.dismiss(loadingToast);
+        toast.error("Login failed", {
+          description: "No user account was returned from authentication.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role, full_name, is_active")
+        .eq("id", data.user.id)
+        .single();
+
+      if (profileError || !profile) {
+        toast.dismiss(loadingToast);
+        toast.error("Profile not found", {
+          description:
+            "Your account was authenticated, but your profile could not be loaded.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!profile.is_active) {
+        await supabase.auth.signOut();
+        toast.dismiss(loadingToast);
+        toast.error("Account inactive", {
+          description: "Your account is currently inactive. Please contact your administrator.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      toast.dismiss(loadingToast);
+      toast.success("Welcome back", {
+        description: profile.full_name
+          ? `Signed in successfully as ${profile.full_name}.`
+          : "Signed in successfully.",
+      });
+
+      switch (profile.role) {
+        case "admin":
+          router.push("/admin");
+          break;
+        case "teacher":
+          router.push("/teacher");
+          break;
+        case "student":
+          router.push("/student");
+          break;
+        default:
+          router.push("/");
+      }
+
+      router.refresh();
+    } catch {
+      toast.dismiss(loadingToast);
+      toast.error("Something went wrong", {
+        description: "An unexpected error occurred while signing in.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
@@ -29,16 +147,16 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-5 text-base leading-8 text-muted-foreground">
-              Sign in to manage students, teachers, offices, assignments,
-              batches, reports, and progress — all from one modern OJT platform.
+              Sign in to access your OJT workspace and continue managing records,
+              monitoring progress, and supporting practicum operations with confidence.
             </p>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-2">
               {[
-                "Centralized OJT records",
-                "Cleaner student monitoring",
-                "Structured assignments",
-                "School-ready reporting",
+                "Secure role-based access",
+                "Cleaner attendance workflows",
+                "Centralized student tracking",
+                "Reliable institutional monitoring",
               ].map((item) => (
                 <div
                   key={item}
@@ -56,7 +174,7 @@ export default function LoginPage() {
             <div className="mb-8 flex flex-col items-center text-center">
               <div className="relative h-16 w-16 overflow-hidden rounded-3xl ring-1 ring-white/10">
                 <Image
-                  src="/logo.png"
+                  src="/Nexora.png"
                   alt="Nexora logo"
                   fill
                   className="object-cover"
@@ -68,11 +186,11 @@ export default function LoginPage() {
                 Sign in to Nexora
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Access your OJT dashboard with your school-issued credentials.
+                Access your dashboard using your school-issued credentials.
               </p>
             </div>
 
-            <form className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-5">
               <div className="space-y-2">
                 <label
                   htmlFor="email"
@@ -86,7 +204,12 @@ export default function LoginPage() {
                     id="email"
                     name="email"
                     type="email"
+                    autoComplete="email"
                     placeholder="Enter your email"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, email: e.target.value }))
+                    }
                     className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                 </div>
@@ -102,6 +225,12 @@ export default function LoginPage() {
                   </label>
                   <button
                     type="button"
+                    onClick={() =>
+                      toast.info("Password recovery", {
+                        description:
+                          "Forgot password flow will be added next.",
+                      })
+                    }
                     className="text-xs font-medium text-primary transition hover:opacity-80"
                   >
                     Forgot password?
@@ -114,7 +243,12 @@ export default function LoginPage() {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     placeholder="Enter your password"
+                    value={form.password}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, password: e.target.value }))
+                    }
                     className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                   <button
@@ -133,9 +267,17 @@ export default function LoginPage() {
 
               <button
                 type="submit"
-                className="w-full rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-95"
+                disabled={isSubmitting}
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-70"
               >
-                Sign In
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing In...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
               </button>
             </form>
 
