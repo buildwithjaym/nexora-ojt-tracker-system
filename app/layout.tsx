@@ -7,16 +7,8 @@ const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
 });
-<Toaster
-  position="top-right"
-  richColors
-  closeButton
-  toastOptions={{
-    classNames: {
-      toast: "rounded-2xl",
-    },
-  }}
-/>
+
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://nexora.app"),
   title: {
@@ -77,6 +69,16 @@ export default function RootLayout({
         className={`${inter.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
       >
         {children}
+        <Toaster
+  position="top-right"
+  richColors
+  closeButton
+  toastOptions={{
+    classNames: {
+      toast: "rounded-2xl",
+    },
+  }}
+/>
       </body>
     </html>
   );

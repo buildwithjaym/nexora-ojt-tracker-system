@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+type ProfileRole = "admin" | "teacher" | "student";
+
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -20,17 +22,42 @@ export default function LoginPage() {
     password: "",
   });
 
+  const handleChange =
+    (field: "email" | "password") =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm((prev) => ({
+        ...prev,
+        [field]: e.target.value,
+      }));
+    };
+
+  const getRedirectPath = (role: ProfileRole) => {
+    switch (role) {
+      case "admin":
+        return "/admin";
+      case "teacher":
+        return "/teacher";
+      case "student":
+        return "/student";
+      default:
+        return "/";
+    }
+  };
+
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    if (!form.email.trim() || !form.password.trim()) {
+    const email = form.email.trim();
+    const password = form.password.trim();
+
+    if (!email || !password) {
       toast.error("Missing credentials", {
         description: "Please enter both your email and password.",
       });
       return;
     }
 
-    if (!form.email.includes("@")) {
+    if (!email.includes("@")) {
       toast.error("Invalid email", {
         description: "Please enter a valid email address.",
       });
@@ -44,25 +71,27 @@ export default function LoginPage() {
     });
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      });
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      if (error) {
+      if (authError) {
         toast.dismiss(loadingToast);
         toast.error("Login failed", {
           description:
-            error.message || "Unable to sign in. Please check your credentials.",
+            authError.message ||
+            "Unable to sign in. Please check your email and password.",
         });
         setIsSubmitting(false);
         return;
       }
 
-      if (!data.user) {
+      if (!authData.user) {
         toast.dismiss(loadingToast);
         toast.error("Login failed", {
-          description: "No user account was returned from authentication.",
+          description: "No authenticated user was returned.",
         });
         setIsSubmitting(false);
         return;
@@ -70,8 +99,8 @@ export default function LoginPage() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role, full_name, is_active")
-        .eq("id", data.user.id)
+        .select("full_name, role, is_active")
+        .eq("id", authData.user.id)
         .single();
 
       if (profileError || !profile) {
@@ -80,19 +109,23 @@ export default function LoginPage() {
           description:
             "Your account was authenticated, but your profile could not be loaded.",
         });
+        await supabase.auth.signOut();
         setIsSubmitting(false);
         return;
       }
 
       if (!profile.is_active) {
-        await supabase.auth.signOut();
         toast.dismiss(loadingToast);
         toast.error("Account inactive", {
-          description: "Your account is currently inactive. Please contact your administrator.",
+          description:
+            "Your account is inactive. Please contact your administrator.",
         });
+        await supabase.auth.signOut();
         setIsSubmitting(false);
         return;
       }
+
+      const redirectTo = getRedirectPath(profile.role as ProfileRole);
 
       toast.dismiss(loadingToast);
       toast.success("Welcome back", {
@@ -101,22 +134,10 @@ export default function LoginPage() {
           : "Signed in successfully.",
       });
 
-      switch (profile.role) {
-        case "admin":
-          router.push("/admin");
-          break;
-        case "teacher":
-          router.push("/teacher");
-          break;
-        case "student":
-          router.push("/student");
-          break;
-        default:
-          router.push("/");
-      }
-
+      router.push(redirectTo);
       router.refresh();
-    } catch {
+    } catch (error) {
+      console.error("Login error:", error);
       toast.dismiss(loadingToast);
       toast.error("Something went wrong", {
         description: "An unexpected error occurred while signing in.",
@@ -130,12 +151,12 @@ export default function LoginPage() {
     <main className="relative min-h-screen overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.22),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.16),transparent_25%)]" />
 
-      <div className="mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-6 py-10 lg:grid-cols-2">
+      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-5 py-10 sm:px-6 lg:grid-cols-2">
         <section className="hidden lg:block">
           <div className="max-w-xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
               <ShieldCheck className="h-4 w-4" />
-              Trusted OJT tracking for institutions
+              Secure access for institutions and practicum users
             </div>
 
             <h1 className="text-5xl font-bold leading-tight tracking-tight">
@@ -147,16 +168,17 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-5 text-base leading-8 text-muted-foreground">
-              Sign in to access your OJT workspace and continue managing records,
-              monitoring progress, and supporting practicum operations with confidence.
+              Sign in to access your OJT workspace and continue managing
+              attendance, progress, assignments, and institutional monitoring
+              with confidence.
             </p>
 
             <div className="mt-10 grid gap-4 sm:grid-cols-2">
               {[
                 "Secure role-based access",
                 "Cleaner attendance workflows",
-                "Centralized student tracking",
-                "Reliable institutional monitoring",
+                "Centralized practicum records",
+                "Reliable monitoring experience",
               ].map((item) => (
                 <div
                   key={item}
@@ -174,7 +196,7 @@ export default function LoginPage() {
             <div className="mb-8 flex flex-col items-center text-center">
               <div className="relative h-16 w-16 overflow-hidden rounded-3xl ring-1 ring-white/10">
                 <Image
-                  src="/Nexora.png"
+                  src="/logo.png"
                   alt="Nexora logo"
                   fill
                   className="object-cover"
@@ -207,9 +229,7 @@ export default function LoginPage() {
                     autoComplete="email"
                     placeholder="Enter your email"
                     value={form.email}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, email: e.target.value }))
-                    }
+                    onChange={handleChange("email")}
                     className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                 </div>
@@ -246,15 +266,14 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     placeholder="Enter your password"
                     value={form.password}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, password: e.target.value }))
-                    }
+                    onChange={handleChange("password")}
                     className="h-12 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((prev) => !prev)}
                     className="text-muted-foreground transition hover:text-foreground"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
