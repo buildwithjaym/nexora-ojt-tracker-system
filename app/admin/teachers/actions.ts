@@ -30,8 +30,17 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function buildTeacherPassword(employeeNumber: string, email: string) {
-  return `${employeeNumber}${email}`;
+function buildTeacherPassword(employeeNumber: string) {
+  return employeeNumber;
+}
+
+function buildFullName(
+  firstName: string,
+  middleName: string | null,
+  lastName: string,
+  suffix: string | null
+) {
+  return [firstName, middleName, lastName, suffix].filter(Boolean).join(" ");
 }
 
 export async function createTeacher(
@@ -48,7 +57,7 @@ export async function createTeacher(
   const email = cleanText(formData.get("email")).toLowerCase();
   const phone = toNullable(cleanText(formData.get("phone")));
   const department = toNullable(cleanText(formData.get("department")));
-  const status = cleanText(formData.get("status")) || "active";
+  const status = (cleanText(formData.get("status")) || "active").toLowerCase();
 
   if (!employee_number || !first_name || !last_name || !email) {
     return {
@@ -64,7 +73,40 @@ export async function createTeacher(
     };
   }
 
-  const password = buildTeacherPassword(employee_number, email);
+  if (!["active", "inactive"].includes(status)) {
+    return {
+      success: false,
+      message: "Invalid teacher status.",
+    };
+  }
+
+  const { data: existingTeacherByEmail } = await supabase
+    .from("teachers")
+    .select("id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existingTeacherByEmail) {
+    return {
+      success: false,
+      message: "A teacher with this email already exists.",
+    };
+  }
+
+  const { data: existingTeacherByEmployee } = await supabase
+    .from("teachers")
+    .select("id")
+    .eq("employee_number", employee_number)
+    .maybeSingle();
+
+  if (existingTeacherByEmployee) {
+    return {
+      success: false,
+      message: "Employee number already exists.",
+    };
+  }
+
+  const password = buildTeacherPassword(employee_number);
 
   const { data: authData, error: authError } =
     await adminSupabase.auth.admin.createUser({
@@ -89,18 +131,25 @@ export async function createTeacher(
   }
 
   const userId = authData.user.id;
+  const full_name = buildFullName(first_name, middle_name, last_name, suffix);
 
-  const { error: profileError } = await supabase.from("profiles").insert({
-    id: userId,
-    email,
-    first_name,
-    middle_name,
-    last_name,
-    suffix,
-    role: "teacher",
-    is_active: status !== "inactive",
-    must_change_password: true,
-  });
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: userId,
+      email,
+      full_name,
+      first_name,
+      middle_name,
+      last_name,
+      suffix,
+      role: "teacher",
+      is_active: status !== "inactive",
+      must_change_password: true,
+    },
+    {
+      onConflict: "id",
+    }
+  );
 
   if (profileError) {
     await adminSupabase.auth.admin.deleteUser(userId);
@@ -161,7 +210,7 @@ export async function updateTeacher(
   const email = cleanText(formData.get("email")).toLowerCase();
   const phone = toNullable(cleanText(formData.get("phone")));
   const department = toNullable(cleanText(formData.get("department")));
-  const status = cleanText(formData.get("status")) || "active";
+  const status = (cleanText(formData.get("status")) || "active").toLowerCase();
 
   if (!employee_number || !first_name || !last_name || !email) {
     return {
@@ -177,9 +226,16 @@ export async function updateTeacher(
     };
   }
 
+  if (!["active", "inactive"].includes(status)) {
+    return {
+      success: false,
+      message: "Invalid teacher status.",
+    };
+  }
+
   const { data: existingTeacher, error: existingTeacherError } = await supabase
     .from("teachers")
-    .select("id, profile_id, email")
+    .select("id, profile_id, email, employee_number")
     .eq("id", teacherId)
     .single();
 
@@ -197,54 +253,62 @@ export async function updateTeacher(
     };
   }
 
+  const { data: emailConflict } = await supabase
+    .from("teachers")
+    .select("id")
+    .eq("email", email)
+    .neq("id", teacherId)
+    .maybeSingle();
+
+  if (emailConflict) {
+    return {
+      success: false,
+      message: "A different teacher already uses this email.",
+    };
+  }
+
+  const { data: employeeConflict } = await supabase
+    .from("teachers")
+    .select("id")
+    .eq("employee_number", employee_number)
+    .neq("id", teacherId)
+    .maybeSingle();
+
+  if (employeeConflict) {
+    return {
+      success: false,
+      message: "A different teacher already uses this employee number.",
+    };
+  }
+
   const profileId = existingTeacher.profile_id;
-  const oldEmail = existingTeacher.email;
+  const full_name = buildFullName(first_name, middle_name, last_name, suffix);
 
-  if (oldEmail !== email) {
-    const { error: authUpdateError } =
-      await adminSupabase.auth.admin.updateUserById(profileId, {
-        email,
-        user_metadata: {
-          first_name,
-          middle_name,
-          last_name,
-          suffix,
-          role: "teacher",
-          employee_number,
-        },
-      });
+  const { error: authUpdateError } =
+    await adminSupabase.auth.admin.updateUserById(profileId, {
+      email,
+      user_metadata: {
+        first_name,
+        middle_name,
+        last_name,
+        suffix,
+        role: "teacher",
+        employee_number,
+      },
+    });
 
-    if (authUpdateError) {
-      return {
-        success: false,
-        message: authUpdateError.message,
-      };
-    }
-  } else {
-    const { error: authMetaError } =
-      await adminSupabase.auth.admin.updateUserById(profileId, {
-        user_metadata: {
-          first_name,
-          middle_name,
-          last_name,
-          suffix,
-          role: "teacher",
-          employee_number,
-        },
-      });
-
-    if (authMetaError) {
-      return {
-        success: false,
-        message: authMetaError.message,
-      };
-    }
+  if (authUpdateError) {
+    return {
+      success: false,
+      message: authUpdateError.message,
+    };
   }
 
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
       email,
+      full_name,
       first_name,
       middle_name,
       last_name,
