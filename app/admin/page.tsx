@@ -16,6 +16,12 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
+type BatchInfo = {
+  id?: string;
+  name?: string;
+  course?: string;
+} | null;
+
 function getStudentProgressStatus(progress: number) {
   if (progress >= 100) return "completed";
   if (progress >= 90) return "almost_complete";
@@ -83,6 +89,11 @@ function getInitials(name: string) {
     .join("");
 }
 
+function normalizeBatch(batch: BatchInfo | BatchInfo[] | undefined) {
+  if (Array.isArray(batch)) return batch[0] ?? null;
+  return batch ?? null;
+}
+
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
 
@@ -94,7 +105,6 @@ export default async function AdminDashboardPage() {
     assignmentsCountRes,
     studentsRes,
     teachersRes,
-    officesRes,
     batchesRes,
     assignmentsRes,
     nearCompletionRes,
@@ -105,27 +115,24 @@ export default async function AdminDashboardPage() {
     supabase.from("batches").select("id", { count: "exact", head: true }),
     supabase.from("assignments").select("id", { count: "exact", head: true }),
 
-    supabase
-      .from("students")
-      .select(`
+    supabase.from("students").select(`
+      id,
+      first_name,
+      middle_name,
+      last_name,
+      suffix,
+      status,
+      required_hours,
+      completed_hours,
+      batch_id,
+      batches:batch_id (
         id,
-        first_name,
-        middle_name,
-        last_name,
-        suffix,
-        status,
-        required_hours,
-        completed_hours,
-        batch_id,
-        batches:batch_id (
-          id,
-          name,
-          course
-        )
-      `),
+        name,
+        course
+      )
+    `),
 
     supabase.from("teachers").select("id, status"),
-    supabase.from("offices").select("id, is_active"),
     supabase.from("batches").select("id, course, is_active"),
 
     supabase
@@ -181,17 +188,12 @@ export default async function AdminDashboardPage() {
 
   const students = studentsRes.data ?? [];
   const teachers = teachersRes.data ?? [];
-  const offices = officesRes.data ?? [];
   const batches = batchesRes.data ?? [];
   const recentAssignments = assignmentsRes.data ?? [];
   const nearCompletionStudentsRaw = nearCompletionRes.data ?? [];
 
   const teacherActiveCount = teachers.filter(
     (teacher: any) => teacher.status === "active"
-  ).length;
-
-  const activeOfficesCount = offices.filter(
-    (office: any) => office.is_active !== false
   ).length;
 
   const activeBatchesCount = batches.filter(
@@ -206,18 +208,13 @@ export default async function AdminDashboardPage() {
         requiredHours > 0 ? Math.round((completedHours / requiredHours) * 100) : 0;
 
       const computedStatus = getStudentProgressStatus(progress);
+      const batch = normalizeBatch(student.batches);
+      const course = batch?.course || "Unassigned";
 
       acc.totalRequiredHours += requiredHours;
       acc.totalCompletedHours += completedHours;
-
       acc.byProgressStatus[computedStatus] =
         (acc.byProgressStatus[computedStatus] ?? 0) + 1;
-
-      const batch = Array.isArray(student.batches)
-        ? student.batches[0]
-        : student.batches;
-
-      const course = batch?.course || "Unassigned";
       acc.byCourse[course] = (acc.byCourse[course] ?? 0) + 1;
 
       if (requiredHours > 0 && completedHours < requiredHours) {
@@ -260,9 +257,7 @@ export default async function AdminDashboardPage() {
 
   const nearCompletionStudents = nearCompletionStudentsRaw
     .map((student: any) => {
-      const batch = Array.isArray(student.batches)
-        ? student.batches[0]
-        : student.batches;
+      const batch = normalizeBatch(student.batches);
 
       const fullName = [
         student.first_name,
@@ -411,7 +406,7 @@ export default async function AdminDashboardPage() {
     {
       title: "Offices",
       value: totalOffices,
-      note: `${activeOfficesCount} active partner offices`,
+      note: "Partner offices for student placement",
       icon: Building2,
       accent:
         "from-orange-500/15 to-yellow-500/10 text-orange-400 ring-orange-500/20",
@@ -436,7 +431,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-5 sm:space-y-6">
-      <section className="overflow-hidden rounded-[28px] border border-border bg-gradient-to-br from-card via-card to-primary/5 p-4 shadow-sm sm:p-6 lg:p-7">
+      <section className="overflow-hidden rounded-[28px] border border-border bg-gradient-to-br from-card via-card to-primary/5 p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-6 lg:p-7">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-400 sm:text-xs">
@@ -449,7 +444,7 @@ export default async function AdminDashboardPage() {
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              Monitor OJT progress, student readiness, office activity, and recent
+              Monitor OJT progress, student readiness, partner offices, and recent
               assignments in one place. Built for faster decisions and better
               administrative visibility.
             </p>
@@ -458,7 +453,7 @@ export default async function AdminDashboardPage() {
           <div className="grid gap-3 sm:grid-cols-3 xl:w-[540px]">
             <Link
               href="/admin/students"
-              className="rounded-2xl border border-border bg-background/70 p-4 transition hover:bg-secondary"
+              className="rounded-2xl border border-border bg-background/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-secondary hover:shadow-sm"
             >
               <p className="text-xs text-muted-foreground">Review</p>
               <p className="mt-1 font-medium">Students</p>
@@ -469,7 +464,7 @@ export default async function AdminDashboardPage() {
 
             <Link
               href="/admin/assignments"
-              className="rounded-2xl border border-border bg-background/70 p-4 transition hover:bg-secondary"
+              className="rounded-2xl border border-border bg-background/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-secondary hover:shadow-sm"
             >
               <p className="text-xs text-muted-foreground">Manage</p>
               <p className="mt-1 font-medium">Assignments</p>
@@ -480,7 +475,7 @@ export default async function AdminDashboardPage() {
 
             <Link
               href="/admin/batches"
-              className="rounded-2xl border border-border bg-background/70 p-4 transition hover:bg-secondary"
+              className="rounded-2xl border border-border bg-background/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-secondary hover:shadow-sm"
             >
               <p className="text-xs text-muted-foreground">Configure</p>
               <p className="mt-1 font-medium">Batches</p>
@@ -499,11 +494,11 @@ export default async function AdminDashboardPage() {
           return (
             <div
               key={stat.title}
-              className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5"
+              className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-md sm:p-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div
-                  className={`rounded-2xl bg-gradient-to-br p-3 ring-1 ${stat.accent}`}
+                  className={`rounded-2xl bg-gradient-to-br p-3 ring-1 transition-transform duration-300 hover:scale-105 ${stat.accent}`}
                 >
                   <Icon className="h-5 w-5" />
                 </div>
@@ -533,7 +528,7 @@ export default async function AdminDashboardPage() {
           return (
             <div
               key={item.title}
-              className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+              className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -543,7 +538,7 @@ export default async function AdminDashboardPage() {
                   </p>
                 </div>
 
-                <div className={`rounded-xl p-3 ring-1 ${item.accent}`}>
+                <div className={`rounded-xl p-3 ring-1 transition-transform duration-300 hover:scale-105 ${item.accent}`}>
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
@@ -557,7 +552,7 @@ export default async function AdminDashboardPage() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-muted-foreground">
@@ -568,7 +563,7 @@ export default async function AdminDashboardPage() {
 
             <Link
               href="/admin/students"
-              className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium transition hover:bg-secondary"
+              className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium transition-all duration-300 hover:bg-secondary"
             >
               View Students
             </Link>
@@ -596,7 +591,7 @@ export default async function AdminDashboardPage() {
 
                 <div className="h-3 overflow-hidden rounded-full bg-secondary">
                   <div
-                    className={`h-full rounded-full transition-all ${
+                    className={`h-full rounded-full transition-all duration-700 ${
                       item.key === "completed"
                         ? "bg-emerald-400"
                         : item.key === "almost_complete"
@@ -613,7 +608,7 @@ export default async function AdminDashboardPage() {
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-background p-4">
+            <div className="rounded-2xl border border-border bg-background p-4 transition-all duration-300 hover:border-primary/20">
               <p className="text-xs text-muted-foreground">
                 Students with Remaining Hours
               </p>
@@ -625,7 +620,7 @@ export default async function AdminDashboardPage() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-background p-4">
+            <div className="rounded-2xl border border-border bg-background p-4 transition-all duration-300 hover:border-primary/20">
               <p className="text-xs text-muted-foreground">
                 Completion Rate by Students
               </p>
@@ -639,7 +634,7 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
           <div className="mb-5">
             <p className="text-sm text-muted-foreground">Enrollment Analytics</p>
             <h3 className="text-lg font-semibold">Course Distribution</h3>
@@ -657,7 +652,7 @@ export default async function AdminDashboardPage() {
 
                 <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
                   <div
-                    className="h-full rounded-full bg-primary"
+                    className="h-full rounded-full bg-primary transition-all duration-700"
                     style={{ width: `${clampWidth(item.percent)}%` }}
                   />
                 </div>
@@ -672,26 +667,26 @@ export default async function AdminDashboardPage() {
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-background p-4">
+            <div className="rounded-2xl border border-border bg-background p-4 transition-all duration-300 hover:border-primary/20">
               <p className="text-2xl font-bold">{activeBatchesCount}</p>
               <p className="text-xs text-muted-foreground">Active batches</p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-background p-4">
+            <div className="rounded-2xl border border-border bg-background p-4 transition-all duration-300 hover:border-primary/20">
               <p className="text-2xl font-bold">{totalBatches}</p>
               <p className="text-xs text-muted-foreground">Total batches</p>
             </div>
 
-            <div className="rounded-2xl border border-border bg-background p-4">
-              <p className="text-2xl font-bold">{activeOfficesCount}</p>
-              <p className="text-xs text-muted-foreground">Active offices</p>
+            <div className="rounded-2xl border border-border bg-background p-4 transition-all duration-300 hover:border-primary/20">
+              <p className="text-2xl font-bold">{totalOffices}</p>
+              <p className="text-xs text-muted-foreground">Partner offices</p>
             </div>
           </div>
         </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-muted-foreground">Students Near Completion</p>
@@ -700,7 +695,7 @@ export default async function AdminDashboardPage() {
 
             <Link
               href="/admin/students"
-              className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium transition hover:bg-secondary"
+              className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium transition-all duration-300 hover:bg-secondary"
             >
               View All
             </Link>
@@ -710,7 +705,7 @@ export default async function AdminDashboardPage() {
             {nearCompletionStudents.map((student) => (
               <div
                 key={student.id}
-                className="rounded-2xl border border-border bg-background p-4"
+                className="rounded-2xl border border-border bg-background p-4 transition-all duration-300 hover:border-primary/20"
               >
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
@@ -738,7 +733,7 @@ export default async function AdminDashboardPage() {
 
                   <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
                     <div
-                      className={`h-full rounded-full ${
+                      className={`h-full rounded-full transition-all duration-700 ${
                         student.progress >= 100
                           ? "bg-emerald-400"
                           : student.progress >= 90
@@ -787,7 +782,7 @@ export default async function AdminDashboardPage() {
 
               <tbody className="divide-y divide-border">
                 {nearCompletionStudents.map((student) => (
-                  <tr key={student.id}>
+                  <tr key={student.id} className="transition-colors hover:bg-muted/25">
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
@@ -820,7 +815,7 @@ export default async function AdminDashboardPage() {
 
                         <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
                           <div
-                            className={`h-full rounded-full ${
+                            className={`h-full rounded-full transition-all duration-700 ${
                               student.progress >= 100
                                 ? "bg-emerald-400"
                                 : student.progress >= 90
@@ -867,7 +862,7 @@ export default async function AdminDashboardPage() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
             <div className="mb-4">
               <p className="text-sm text-muted-foreground">Assignment Snapshot</p>
               <h3 className="text-lg font-semibold">Recent Assignment Status</h3>
@@ -892,7 +887,7 @@ export default async function AdminDashboardPage() {
 
                   <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
                     <div
-                      className={`h-full rounded-full ${
+                      className={`h-full rounded-full transition-all duration-700 ${
                         item.status === "approved" || item.status === "active"
                           ? "bg-emerald-400"
                           : item.status === "pending"
@@ -915,7 +910,7 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
             <div className="mb-4">
               <p className="text-sm text-muted-foreground">Latest Activity</p>
               <h3 className="text-lg font-semibold">Recent Assignments</h3>
@@ -946,7 +941,7 @@ export default async function AdminDashboardPage() {
                 return (
                   <div
                     key={assignment.id}
-                    className="rounded-2xl border border-border p-4"
+                    className="rounded-2xl border border-border p-4 transition-all duration-300 hover:border-primary/20"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -987,7 +982,7 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
+          <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
             <div className="mb-4 flex items-center gap-2">
               <Clock3 className="h-4 w-4 text-primary" />
               <div>
@@ -1010,9 +1005,10 @@ export default async function AdminDashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-300">
-                {activeOfficesCount} active office
-                {activeOfficesCount === 1 ? "" : "s"} and {teacherActiveCount} active
-                supervisor{teacherActiveCount === 1 ? "" : "s"} are available for OJT coordination.
+                {totalOffices} partner office{totalOffices === 1 ? "" : "s"} and{" "}
+                {teacherActiveCount} active supervisor
+                {teacherActiveCount === 1 ? "" : "s"} are available for OJT
+                coordination.
               </div>
             </div>
           </div>
