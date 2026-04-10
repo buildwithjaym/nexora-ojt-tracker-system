@@ -107,8 +107,7 @@ export default async function AdminDashboardPage() {
 
     supabase
       .from("students")
-      .select(
-        `
+      .select(`
         id,
         first_name,
         middle_name,
@@ -123,8 +122,7 @@ export default async function AdminDashboardPage() {
           name,
           course
         )
-      `
-      ),
+      `),
 
     supabase.from("teachers").select("id, status"),
     supabase.from("offices").select("id, is_active"),
@@ -132,8 +130,7 @@ export default async function AdminDashboardPage() {
 
     supabase
       .from("assignments")
-      .select(
-        `
+      .select(`
         id,
         status,
         created_at,
@@ -151,15 +148,13 @@ export default async function AdminDashboardPage() {
           id,
           name
         )
-      `
-      )
+      `)
       .order("created_at", { ascending: false })
       .limit(8),
 
     supabase
       .from("students")
-      .select(
-        `
+      .select(`
         id,
         first_name,
         middle_name,
@@ -173,8 +168,7 @@ export default async function AdminDashboardPage() {
           name,
           course
         )
-      `
-      )
+      `)
       .order("completed_hours", { ascending: false })
       .limit(12),
   ]);
@@ -303,15 +297,15 @@ export default async function AdminDashboardPage() {
     .slice(0, 8);
 
   const courseDistribution = Object.entries(
-  studentAnalytics.byCourse as Record<string, number>
-)
-  .map(([course, count]) => ({
-    course,
-    count: Number(count),
-    percent: percentage(Number(count), totalStudents),
-  }))
-  .sort((a, b) => b.count - a.count)
-  .slice(0, 6);
+    studentAnalytics.byCourse as Record<string, number>
+  )
+    .map(([course, count]) => ({
+      course,
+      count: Number(count),
+      percent: percentage(Number(count), totalStudents),
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6);
 
   const progressDistribution = [
     {
@@ -441,23 +435,23 @@ export default async function AdminDashboardPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card to-primary/5 p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+    <div className="space-y-5 sm:space-y-6">
+      <section className="overflow-hidden rounded-[28px] border border-border bg-gradient-to-br from-card via-card to-primary/5 p-4 shadow-sm sm:p-6 lg:p-7">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-400 sm:text-xs">
               <ShieldCheck className="h-3.5 w-3.5" />
               Admin Analytics Overview
             </div>
 
-            <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h1 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl lg:text-4xl">
               Nexora OJT Operations Dashboard
             </h1>
 
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground sm:text-base">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
               Monitor OJT progress, student readiness, office activity, and recent
-              assignments in one place. This dashboard is designed for faster
-              decision-making and better administrative visibility.
+              assignments in one place. Built for faster decisions and better
+              administrative visibility.
             </p>
           </div>
 
@@ -507,7 +501,7 @@ export default async function AdminDashboardPage() {
               key={stat.title}
               className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <div
                   className={`rounded-2xl bg-gradient-to-br p-3 ring-1 ${stat.accent}`}
                 >
@@ -524,13 +518,15 @@ export default async function AdminDashboardPage() {
               <p className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
                 {stat.value}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">{stat.note}</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                {stat.note}
+              </p>
             </div>
           );
         })}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {topInsights.map((item) => {
           const Icon = item.icon;
 
@@ -539,7 +535,7 @@ export default async function AdminDashboardPage() {
               key={item.title}
               className="rounded-2xl border border-border bg-card p-4 shadow-sm"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm text-muted-foreground">{item.title}</p>
                   <p className="mt-2 text-2xl font-bold tracking-tight">
@@ -552,13 +548,15 @@ export default async function AdminDashboardPage() {
                 </div>
               </div>
 
-              <p className="mt-3 text-xs text-muted-foreground">{item.note}</p>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                {item.note}
+              </p>
             </div>
           );
         })}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -580,15 +578,13 @@ export default async function AdminDashboardPage() {
             {progressDistribution.map((item) => (
               <div key={item.key} className="space-y-2">
                 <div className="flex items-center justify-between gap-4 text-sm">
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getStatusBadgeClasses(
-                        item.key
-                      )}`}
-                    >
-                      {item.label}
-                    </span>
-                  </div>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getStatusBadgeClasses(
+                      item.key
+                    )}`}
+                  >
+                    {item.label}
+                  </span>
 
                   <div className="text-right">
                     <span className="font-medium">{item.count}</span>
@@ -618,21 +614,25 @@ export default async function AdminDashboardPage() {
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-border bg-background p-4">
-              <p className="text-xs text-muted-foreground">Students with Remaining Hours</p>
+              <p className="text-xs text-muted-foreground">
+                Students with Remaining Hours
+              </p>
               <p className="mt-2 text-xl font-semibold">
                 {studentAnalytics.studentsWithRemaining}
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Still actively completing OJT requirements
               </p>
             </div>
 
             <div className="rounded-2xl border border-border bg-background p-4">
-              <p className="text-xs text-muted-foreground">Completion Rate by Students</p>
+              <p className="text-xs text-muted-foreground">
+                Completion Rate by Students
+              </p>
               <p className="mt-2 text-xl font-semibold">
                 {completionRateByStudents}%
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 Based on students who reached 100% progress
               </p>
             </div>
@@ -671,23 +671,20 @@ export default async function AdminDashboardPage() {
             )}
           </div>
 
-          <div className="mt-6 rounded-2xl border border-border bg-background p-4">
-            <p className="text-xs text-muted-foreground">Batch Configuration</p>
-            <div className="mt-3 flex items-end justify-between gap-4">
-              <div>
-                <p className="text-2xl font-bold">{activeBatchesCount}</p>
-                <p className="text-xs text-muted-foreground">Active batches</p>
-              </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-background p-4">
+              <p className="text-2xl font-bold">{activeBatchesCount}</p>
+              <p className="text-xs text-muted-foreground">Active batches</p>
+            </div>
 
-              <div>
-                <p className="text-2xl font-bold">{totalBatches}</p>
-                <p className="text-xs text-muted-foreground">Total batches</p>
-              </div>
+            <div className="rounded-2xl border border-border bg-background p-4">
+              <p className="text-2xl font-bold">{totalBatches}</p>
+              <p className="text-xs text-muted-foreground">Total batches</p>
+            </div>
 
-              <div>
-                <p className="text-2xl font-bold">{activeOfficesCount}</p>
-                <p className="text-xs text-muted-foreground">Active offices</p>
-              </div>
+            <div className="rounded-2xl border border-border bg-background p-4">
+              <p className="text-2xl font-bold">{activeOfficesCount}</p>
+              <p className="text-xs text-muted-foreground">Active offices</p>
             </div>
           </div>
         </div>
@@ -709,7 +706,73 @@ export default async function AdminDashboardPage() {
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="space-y-3 lg:hidden">
+            {nearCompletionStudents.map((student) => (
+              <div
+                key={student.id}
+                className="rounded-2xl border border-border bg-background p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
+                    {getInitials(student.fullName || "Student")}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {student.fullName}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {student.batchName} • {student.course}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {student.completedHours} / {student.requiredHours} hrs
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="mb-2 flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground">Progress</span>
+                    <span className="font-medium">{student.progress}%</span>
+                  </div>
+
+                  <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className={`h-full rounded-full ${
+                        student.progress >= 100
+                          ? "bg-emerald-400"
+                          : student.progress >= 90
+                          ? "bg-lime-400"
+                          : student.progress >= 60
+                          ? "bg-blue-400"
+                          : "bg-amber-400"
+                      }`}
+                      style={{ width: `${clampWidth(student.progress)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium">{student.remaining} hrs left</p>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getStatusBadgeClasses(
+                      student.progressStatus
+                    )}`}
+                  >
+                    {formatStatusLabel(student.progressStatus)}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {nearCompletionStudents.length === 0 && (
+              <div className="rounded-2xl border border-border bg-background p-6 text-center text-sm text-muted-foreground">
+                No student records found yet.
+              </div>
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full min-w-[820px] text-left">
               <thead>
                 <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
@@ -883,11 +946,11 @@ export default async function AdminDashboardPage() {
                 return (
                   <div
                     key={assignment.id}
-                    className="rounded-xl border border-border p-4"
+                    className="rounded-2xl border border-border p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
                           {studentName || "Unknown Student"}
                         </p>
 
@@ -934,19 +997,19 @@ export default async function AdminDashboardPage() {
             </div>
 
             <div className="space-y-3 text-sm">
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-amber-300">
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-amber-300">
                 {pendingOrAttentionCount > 0
                   ? `${pendingOrAttentionCount} student${pendingOrAttentionCount === 1 ? "" : "s"} need closer monitoring due to low progress.`
                   : "No students are currently flagged for low progress."}
               </div>
 
-              <div className="rounded-xl border border-blue-500/20 bg-blue-500/10 p-4 text-blue-300">
+              <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 text-blue-300">
                 {nearCompletionStudents.length > 0
                   ? `${nearCompletionStudents.length} student${nearCompletionStudents.length === 1 ? "" : "s"} are close to completion and may be ready for final evaluation soon.`
                   : "No students are currently close to final completion."}
               </div>
 
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-300">
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-300">
                 {activeOfficesCount} active office
                 {activeOfficesCount === 1 ? "" : "s"} and {teacherActiveCount} active
                 supervisor{teacherActiveCount === 1 ? "" : "s"} are available for OJT coordination.
