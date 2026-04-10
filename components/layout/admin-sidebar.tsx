@@ -3,181 +3,122 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { toast } from "sonner";
 import {
-  BarChart3,
   Building2,
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
   Layers3,
-  LifeBuoy,
   LogOut,
   Menu,
-  Settings,
-  Sparkles,
   Users,
   X,
+  ChevronRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
-  {
-    label: "Dashboard",
-    href: "/admin",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Students",
-    href: "/admin/students",
-    icon: Users,
-  },
-  {
-    label: "Teachers",
-    href: "/admin/teachers",
-    icon: GraduationCap,
-  },
-  {
-    label: "Offices",
-    href: "/admin/offices",
-    icon: Building2,
-  },
-  {
-    label: "Assignments",
-    href: "/admin/assignments",
-    icon: ClipboardList,
-  },
-  {
-    label: "Batches",
-    href: "/admin/batches",
-    icon: Layers3,
-  },
-  {
-    label: "Reports",
-    href: "/admin/reports",
-    icon: BarChart3,
-  },
-  {
-    label: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
-  },
+  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { label: "Students", href: "/admin/students", icon: Users },
+  { label: "Teachers", href: "/admin/teachers", icon: GraduationCap },
+  { label: "Offices", href: "/admin/offices", icon: Building2 },
+  { label: "Assignments", href: "/admin/assignments", icon: ClipboardList },
+  { label: "Batches", href: "/admin/batches", icon: Layers3 },
 ];
+
+interface SidebarProps {
+  pathname: string;
+  onNavigate?: () => void;
+  onLogout: () => void;
+  isLoggingOut: boolean;
+}
 
 function SidebarContent({
   pathname,
   onNavigate,
   onLogout,
   isLoggingOut,
-}: {
-  pathname: string;
-  onNavigate?: () => void;
-  onLogout: () => void;
-  isLoggingOut: boolean;
-}) {
+}: SidebarProps) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="mb-5 rounded-[28px] border border-white/10 bg-background/70 p-4 shadow-lg shadow-black/10">
-        <Link href="/admin" className="flex items-center gap-3" onClick={onNavigate}>
-          <div className="relative h-12 w-12 overflow-hidden rounded-2xl ring-1 ring-white/10">
+    <div className="flex h-full min-h-0 flex-col bg-card">
+      <div className="border-b border-border/60 px-4 py-4 sm:px-5">
+        <Link
+          href="/admin"
+          onClick={onNavigate}
+          className="flex items-center gap-3"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20">
             <Image
               src="/Nexora.png"
-              alt="Nexora logo"
-              fill
-              className="object-cover"
-              sizes="48px"
+              alt="Nexora"
+              width={24}
+              height={24}
+              className="brightness-0 invert"
             />
           </div>
 
-          <div>
-            <h2 className="text-base font-semibold tracking-tight">Nexora</h2>
-            <p className="text-xs text-muted-foreground">Admin Control Panel</p>
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold tracking-tight text-foreground">
+              Nexora
+            </p>
+            <p className="truncate text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Admin System
+            </p>
           </div>
         </Link>
-
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-medium text-primary">
-          <Sparkles className="h-3.5 w-3.5" />
-          Trusted OJT management
-        </div>
       </div>
 
-      <div className="mb-3 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-        Main Navigation
-      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+        <nav className="space-y-1.5">
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const Icon = item.icon;
 
-      <nav className="space-y-1.5">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
-          const Icon = item.icon;
-
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              onClick={onNavigate}
-              className={clsx(
-                "group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                  : "text-muted-foreground hover:bg-background hover:text-foreground"
-              )}
-            >
-              <span
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={onNavigate}
                 className={clsx(
-                  "flex h-9 w-9 items-center justify-center rounded-xl transition",
+                  "group flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all",
                   isActive
-                    ? "bg-white/10"
-                    : "bg-background text-primary ring-1 ring-border group-hover:ring-primary/20"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <Icon className="h-4.5 w-4.5" />
-              </span>
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+                <div className="flex min-w-0 items-center gap-3">
+                  <Icon
+                    className={clsx(
+                      "h-5 w-5 shrink-0",
+                      isActive
+                        ? "text-current"
+                        : "text-muted-foreground/70 group-hover:text-primary"
+                    )}
+                  />
+                  <span className="truncate">{item.label}</span>
+                </div>
 
-      <div className="mt-auto space-y-4 pt-6">
-        <div className="rounded-[24px] border border-primary/15 bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
-          <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-primary/10 p-2 text-primary">
-              <LifeBuoy className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Need help?</p>
-              <p className="mt-1 text-xs leading-6 text-muted-foreground">
-                Keep your OJT operations organized with a cleaner admin workflow.
-              </p>
-              <button
-                type="button"
-                className="mt-3 inline-flex rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition hover:bg-secondary"
-              >
-                Contact Support
-              </button>
-            </div>
-          </div>
-        </div>
+                {isActive && <ChevronRight className="h-4 w-4 shrink-0 opacity-70" />}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
-        <div className="rounded-[24px] border border-white/10 bg-background/70 p-4">
-          <p className="text-sm font-semibold">Admin Account</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Super Administrator
-          </p>
-
-          <button
-            type="button"
-            onClick={onLogout}
-            disabled={isLoggingOut}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            <LogOut className="h-4 w-4" />
-            {isLoggingOut ? "Signing out..." : "Logout"}
-          </button>
-        </div>
+      <div className="border-t border-border/60 p-3">
+        <button
+          type="button"
+          onClick={onLogout}
+          disabled={isLoggingOut}
+          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <LogOut className="h-5 w-5 shrink-0" />
+          <span>{isLoggingOut ? "Signing out..." : "Logout Account"}</span>
+        </button>
       </div>
     </div>
   );
@@ -191,76 +132,61 @@ export function AdminSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
   async function handleLogout() {
     setIsLoggingOut(true);
-
-    const loadingToast = toast.loading("Signing out...", {
-      description: "Please wait a moment.",
-    });
+    const toastId = toast.loading("Signing out...");
 
     try {
       const { error } = await supabase.auth.signOut();
+      if (error) throw error;
 
-      if (error) {
-        toast.dismiss(loadingToast);
-        toast.error("Logout failed", {
-          description: error.message || "Unable to sign out right now.",
-        });
-        setIsLoggingOut(false);
-        return;
-      }
-
-      toast.dismiss(loadingToast);
-      toast.success("Signed out", {
-        description: "You have been logged out successfully.",
-      });
-
+      toast.success("Logged out successfully.", { id: toastId });
       router.push("/login");
       router.refresh();
-    } catch (error) {
-      console.error("Logout error:", error);
-      toast.dismiss(loadingToast);
-      toast.error("Something went wrong", {
-        description: "An unexpected error occurred while signing out.",
-      });
-    } finally {
+    } catch (error: any) {
+      toast.error(error?.message || "Logout failed.", { id: toastId });
       setIsLoggingOut(false);
-      setMobileOpen(false);
     }
   }
 
   return (
     <>
-      {/* Mobile Top Bar */}
-      <div className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl lg:hidden">
-        <Link href="/admin" className="flex items-center gap-3">
-          <div className="relative h-10 w-10 overflow-hidden rounded-2xl ring-1 ring-white/10">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden">
+        <Link href="/admin" className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <Image
               src="/Nexora.png"
-              alt="Nexora logo"
-              fill
-              className="object-cover"
-              sizes="40px"
+              alt="logo"
+              width={20}
+              height={20}
+              className="brightness-0 invert"
             />
           </div>
-          <div>
-            <p className="text-sm font-semibold">Nexora</p>
-            <p className="text-[11px] text-muted-foreground">Admin Panel</p>
-          </div>
+          <span className="text-sm font-semibold tracking-tight">Nexora</span>
         </Link>
 
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground transition hover:bg-secondary"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card transition hover:bg-muted"
           aria-label="Open sidebar"
         >
           <Menu className="h-5 w-5" />
         </button>
-      </div>
+      </header>
 
-      {/* Desktop Sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-72 shrink-0 border-r border-border bg-card/80 px-4 py-5 backdrop-blur-xl lg:flex">
+      <aside className="hidden h-screen w-72 shrink-0 border-r border-border bg-card lg:sticky lg:top-0 lg:block">
         <SidebarContent
           pathname={pathname}
           onLogout={handleLogout}
@@ -268,34 +194,35 @@ export function AdminSidebar() {
         />
       </aside>
 
-      {/* Mobile Overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
             onClick={() => setMobileOpen(false)}
             aria-label="Close sidebar overlay"
           />
 
-          <aside className="absolute left-0 top-0 flex h-full w-[88%] max-w-[320px] flex-col border-r border-border bg-card/95 px-4 py-5 shadow-2xl backdrop-blur-xl">
-            <div className="mb-4 flex items-center justify-end">
+          <aside className="absolute inset-y-0 left-0 flex h-dvh w-[84%] max-w-[320px] flex-col border-r border-border bg-card shadow-2xl">
+            <div className="flex items-center justify-end border-b border-border/60 p-3">
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background text-foreground transition hover:bg-secondary"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background transition hover:bg-muted"
                 aria-label="Close sidebar"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <SidebarContent
-              pathname={pathname}
-              onNavigate={() => setMobileOpen(false)}
-              onLogout={handleLogout}
-              isLoggingOut={isLoggingOut}
-            />
+            <div className="min-h-0 flex-1">
+              <SidebarContent
+                pathname={pathname}
+                onNavigate={() => setMobileOpen(false)}
+                onLogout={handleLogout}
+                isLoggingOut={isLoggingOut}
+              />
+            </div>
           </aside>
         </div>
       )}

@@ -166,7 +166,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ## 📍 Key Modules
 
 * Authentication System
-* Role Management (Student / Admin)
+* Role Management (Admin / Teacher / Student)
 * Time Tracking Engine
 * GPS Verification
 * Photo Upload Validation

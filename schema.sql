@@ -483,3 +483,9 @@ on public.profiles
 for delete
 to authenticated
 using (public.is_admin());
+
+alter table public.teachers
+add column if not exists profile_id uuid unique references public.profiles(id) on delete cascade;
+
+create index if not exists idx_teachers_profile_id
+on public.teachers(profile_id);
