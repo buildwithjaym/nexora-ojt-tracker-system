@@ -532,3 +532,30 @@ on public.offices
 for delete
 to authenticated
 using (public.is_admin());
+
+
+alter table public.offices
+add column if not exists latitude double precision,
+add column if not exists longitude double precision;
+
+alter table public.offices
+drop column if exists map_label;
+
+create index if not exists idx_assignments_student_id
+on public.assignments(student_id);
+
+create index if not exists idx_assignments_teacher_id
+on public.assignments(teacher_id);
+
+create index if not exists idx_assignments_office_id
+on public.assignments(office_id);
+
+create index if not exists idx_assignments_status
+on public.assignments(status);
+
+create index if not exists idx_assignments_created_at
+on public.assignments(created_at desc);
+
+create unique index if not exists uq_assignments_one_active_per_student
+on public.assignments(student_id)
+where status in ('pending', 'active');
