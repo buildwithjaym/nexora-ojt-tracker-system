@@ -47,10 +47,12 @@ export async function createOffice(
   const status = cleanText(formData.get("status")) || "active";
   const latitude = toNullableFloat(cleanText(formData.get("latitude")));
   const longitude = toNullableFloat(cleanText(formData.get("longitude")));
-  const map_label = toNullable(cleanText(formData.get("map_label")));
 
   if (!name) {
-    return { success: false, message: "Office name is required." };
+    return {
+      success: false,
+      message: "Office name is required.",
+    };
   }
 
   if (contact_email && !isValidEmail(contact_email)) {
@@ -64,7 +66,10 @@ export async function createOffice(
     capacityRaw.trim() === "" ? null : Number.parseInt(capacityRaw, 10);
 
   if (capacity !== null && Number.isNaN(capacity)) {
-    return { success: false, message: "Capacity must be a valid number." };
+    return {
+      success: false,
+      message: "Capacity must be a valid number.",
+    };
   }
 
   const { error } = await supabase.from("offices").insert({
@@ -77,17 +82,22 @@ export async function createOffice(
     status,
     latitude,
     longitude,
-    map_label,
   });
 
   if (error) {
-    return { success: false, message: error.message };
+    return {
+      success: false,
+      message: error.message,
+    };
   }
 
   revalidatePath("/admin/offices");
   revalidatePath("/admin");
 
-  return { success: true, message: "Office created successfully." };
+  return {
+    success: true,
+    message: "Office created successfully.",
+  };
 }
 
 export async function updateOffice(
@@ -107,10 +117,12 @@ export async function updateOffice(
   const status = cleanText(formData.get("status")) || "active";
   const latitude = toNullableFloat(cleanText(formData.get("latitude")));
   const longitude = toNullableFloat(cleanText(formData.get("longitude")));
-  const map_label = toNullable(cleanText(formData.get("map_label")));
 
   if (!name) {
-    return { success: false, message: "Office name is required." };
+    return {
+      success: false,
+      message: "Office name is required.",
+    };
   }
 
   if (contact_email && !isValidEmail(contact_email)) {
@@ -124,7 +136,10 @@ export async function updateOffice(
     capacityRaw.trim() === "" ? null : Number.parseInt(capacityRaw, 10);
 
   if (capacity !== null && Number.isNaN(capacity)) {
-    return { success: false, message: "Capacity must be a valid number." };
+    return {
+      success: false,
+      message: "Capacity must be a valid number.",
+    };
   }
 
   const { error } = await supabase
@@ -139,18 +154,23 @@ export async function updateOffice(
       status,
       latitude,
       longitude,
-      map_label,
     })
     .eq("id", officeId);
 
   if (error) {
-    return { success: false, message: error.message };
+    return {
+      success: false,
+      message: error.message,
+    };
   }
 
   revalidatePath("/admin/offices");
   revalidatePath("/admin");
 
-  return { success: true, message: "Office updated successfully." };
+  return {
+    success: true,
+    message: "Office updated successfully.",
+  };
 }
 
 export async function deleteOffice(
@@ -161,11 +181,17 @@ export async function deleteOffice(
   const { error } = await supabase.from("offices").delete().eq("id", officeId);
 
   if (error) {
-    return { success: false, message: error.message };
+    return {
+      success: false,
+      message: error.message,
+    };
   }
 
   revalidatePath("/admin/offices");
   revalidatePath("/admin");
 
-  return { success: true, message: "Office deleted successfully." };
+  return {
+    success: true,
+    message: "Office deleted successfully.",
+  };
 }
