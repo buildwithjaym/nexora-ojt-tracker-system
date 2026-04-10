@@ -52,15 +52,15 @@ function SidebarContent({
         <Link
           href="/admin"
           onClick={onNavigate}
-          className="flex items-center gap-3"
+          className="flex items-center gap-3 rounded-2xl p-1 transition hover:bg-muted/50"
         >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/15">
             <Image
               src="/Nexora.png"
-              alt="Nexora"
-              width={24}
-              height={24}
-              className="brightness-0 invert"
+              alt="Nexora Logo"
+              width={28}
+              height={28}
+              className="object-contain"
             />
           </div>
 
@@ -69,13 +69,19 @@ function SidebarContent({
               Nexora
             </p>
             <p className="truncate text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-              Admin System
+              Trusted OJT Tracker
             </p>
           </div>
         </Link>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+        <div className="mb-3 px-2">
+          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            Navigation
+          </p>
+        </div>
+
         <nav className="space-y-1.5">
           {navItems.map((item) => {
             const isActive =
@@ -88,7 +94,7 @@ function SidebarContent({
                 href={item.href}
                 onClick={onNavigate}
                 className={clsx(
-                  "group flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium transition-all",
+                  "group flex w-full items-center justify-between rounded-2xl px-4 py-3 text-sm font-medium transition-all",
                   isActive
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -106,7 +112,9 @@ function SidebarContent({
                   <span className="truncate">{item.label}</span>
                 </div>
 
-                {isActive && <ChevronRight className="h-4 w-4 shrink-0 opacity-70" />}
+                {isActive && (
+                  <ChevronRight className="h-4 w-4 shrink-0 opacity-80" />
+                )}
               </Link>
             );
           })}
@@ -114,11 +122,18 @@ function SidebarContent({
       </div>
 
       <div className="border-t border-border/60 p-3">
+        <div className="mb-3 rounded-2xl border border-border bg-background px-4 py-3">
+          <p className="text-xs font-medium text-foreground">Admin Session</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Manage students, assignments, offices, and batches.
+          </p>
+        </div>
+
         <button
           type="button"
           onClick={onLogout}
           disabled={isLoggingOut}
-          className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-destructive transition hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <LogOut className="h-5 w-5 shrink-0" />
           <span>{isLoggingOut ? "Signing out..." : "Logout Account"}</span>
@@ -165,7 +180,7 @@ export function AdminSidebar({
 
   return (
     <>
-      <aside className="hidden h-screen w-72 shrink-0 border-r border-border bg-card lg:sticky lg:top-0 lg:block">
+      <aside className="hidden h-screen w-[280px] shrink-0 border-r border-border bg-card lg:sticky lg:top-0 lg:block xl:w-[296px]">
         <SidebarContent
           pathname={pathname}
           onLogout={handleLogout}
@@ -177,17 +192,35 @@ export function AdminSidebar({
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
+            className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
             onClick={onMobileClose}
             aria-label="Close sidebar overlay"
           />
 
-          <aside className="absolute inset-y-0 left-0 flex h-dvh w-[84%] max-w-[320px] flex-col border-r border-border bg-card shadow-2xl">
-            <div className="flex items-center justify-end border-b border-border/60 p-3">
+          <aside className="absolute inset-y-0 left-0 flex h-dvh w-[88%] max-w-[340px] flex-col border-r border-border bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/15">
+                  <Image
+                    src="/logo.png"
+                    alt="Nexora Logo"
+                    width={24}
+                    height={24}
+                    className="object-contain"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold tracking-tight">Nexora</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Admin Navigation
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={onMobileClose}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background transition hover:bg-muted"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-background transition hover:bg-muted"
                 aria-label="Close sidebar"
               >
                 <X className="h-5 w-5" />
