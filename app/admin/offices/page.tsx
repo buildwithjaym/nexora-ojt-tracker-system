@@ -58,7 +58,6 @@ export default async function OfficesPage({
       status,
       latitude,
       longitude,
-      map_label,
       created_at
     `,
       { count: "exact" }
@@ -74,7 +73,6 @@ export default async function OfficesPage({
       `contact_person.ilike.${pattern}`,
       `contact_email.ilike.${pattern}`,
       `contact_phone.ilike.${pattern}`,
-      `map_label.ilike.${pattern}`,
     ].join(",");
 
     countQuery = countQuery.or(filters);
@@ -97,8 +95,7 @@ export default async function OfficesPage({
             capacity,
             status,
             latitude,
-            longitude,
-            map_label
+            longitude
           `)
           .eq("id", editId)
           .single()
@@ -152,7 +149,7 @@ export default async function OfficesPage({
 
         <Link
           href={buildCreateModalUrl()}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all duration-200 hover:scale-[1.02] hover:opacity-90"
         >
           <Plus className="h-4 w-4" />
           Add Office
@@ -172,14 +169,14 @@ export default async function OfficesPage({
                 type="text"
                 name="search"
                 defaultValue={search}
-                placeholder="Search by office, address, contact, or map label..."
+                placeholder="Search by office, address, or contact..."
                 className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
 
             <button
               type="submit"
-              className="rounded-2xl border border-border bg-background px-4 py-2.5 text-sm font-medium transition hover:bg-secondary"
+              className="rounded-2xl border border-border bg-background px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-secondary"
             >
               Search
             </button>
@@ -187,7 +184,7 @@ export default async function OfficesPage({
             {search && (
               <Link
                 href="/admin/offices"
-                className="rounded-2xl border border-border bg-background px-4 py-2.5 text-sm font-medium transition hover:bg-secondary"
+                className="rounded-2xl border border-border bg-background px-4 py-2.5 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-secondary"
               >
                 Clear
               </Link>
@@ -213,11 +210,11 @@ export default async function OfficesPage({
             return (
               <div
                 key={office.id}
-                className="grid gap-4 rounded-2xl border border-border p-4 lg:grid-cols-[1.1fr_1fr_220px]"
+                className="grid gap-4 rounded-2xl border border-border p-4 transition-all duration-200 hover:border-primary/30 hover:shadow-md lg:grid-cols-[1.1fr_1fr_220px]"
               >
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="rounded-xl bg-primary/10 p-2 text-primary">
+                    <div className="rounded-xl bg-primary/10 p-2 text-primary transition-transform duration-200 hover:scale-105">
                       <Building2 className="h-4 w-4" />
                     </div>
 
@@ -259,19 +256,12 @@ export default async function OfficesPage({
                     <span className="inline-flex rounded-full border border-border px-3 py-1 text-xs font-medium">
                       Capacity: {office.capacity ?? "-"}
                     </span>
-
-                    {office.map_label && (
-                      <span className="inline-flex rounded-full border border-border px-3 py-1 text-xs font-medium">
-                        {office.map_label}
-                      </span>
-                    )}
                   </div>
                 </div>
 
                 <OfficeMapPreview
                   latitude={office.latitude}
                   longitude={office.longitude}
-                  label={office.map_label || office.name}
                 />
 
                 <div className="flex flex-col gap-2 lg:items-end">
@@ -280,7 +270,7 @@ export default async function OfficesPage({
                       href={mapUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium transition hover:bg-secondary"
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-secondary"
                     >
                       <ExternalLink className="h-4 w-4" />
                       View Map
@@ -289,7 +279,7 @@ export default async function OfficesPage({
 
                   <Link
                     href={buildEditModalUrl(office.id)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium transition hover:bg-secondary"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2 text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-secondary"
                   >
                     <SquarePen className="h-4 w-4" />
                     Edit
