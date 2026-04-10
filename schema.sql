@@ -431,3 +431,55 @@ on public.assignments
 for delete
 to authenticated
 using (public.is_admin());
+
+alter table public.students
+add column if not exists profile_id uuid unique references public.profiles(id) on delete cascade;
+
+create index if not exists idx_students_profile_id
+on public.students(profile_id);
+
+add column if not exists must_change_password boolean default true;
+
+create policy "Users can view their own profile"
+on public.profiles
+for select
+to authenticated
+using (id = auth.uid());
+
+create policy "Users can update their own profile"
+on public.profiles
+for update
+to authenticated
+using (id = auth.uid())
+with check (id = auth.uid());
+
+create policy "Users can insert their own profile"
+on public.profiles
+for insert
+to authenticated
+with check (id = auth.uid());
+
+create policy "Admins can view all profiles"
+on public.profiles
+for select
+to authenticated
+using (public.is_admin());
+
+create policy "Admins can insert profiles"
+on public.profiles
+for insert
+to authenticated
+with check (public.is_admin());
+
+create policy "Admins can update profiles"
+on public.profiles
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "Admins can delete profiles"
+on public.profiles
+for delete
+to authenticated
+using (public.is_admin());
