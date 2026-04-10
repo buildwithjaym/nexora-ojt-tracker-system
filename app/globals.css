@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@import "leaflet/dist/leaflet.css";
 :root {
   --background: 222 47% 7%;
   --foreground: 210 40% 98%;
@@ -114,4 +114,17 @@ body {
 ::selection {
   background: hsl(var(--primary) / 0.25);
   color: hsl(var(--foreground));
+}
+
+
+.leaflet-container {
+  z-index: 0;
+  font: inherit;
+}
+
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom,
+.leaflet-control {
+  z-index: 0 !important;
 }
