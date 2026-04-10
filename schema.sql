@@ -489,3 +489,46 @@ add column if not exists profile_id uuid unique references public.profiles(id) o
 
 create index if not exists idx_teachers_profile_id
 on public.teachers(profile_id);
+
+
+create index if not exists idx_offices_status
+on public.offices(status);
+
+create index if not exists idx_offices_created_at
+on public.offices(created_at desc);
+
+create trigger trg_offices_updated_at
+before update on public.offices
+for each row
+execute function public.set_updated_at();
+
+
+drop policy if exists "Admins can view offices" on public.offices;
+drop policy if exists "Admins can insert offices" on public.offices;
+drop policy if exists "Admins can update offices" on public.offices;
+drop policy if exists "Admins can delete offices" on public.offices;
+
+create policy "Admins can view offices"
+on public.offices
+for select
+to authenticated
+using (public.is_admin());
+
+create policy "Admins can insert offices"
+on public.offices
+for insert
+to authenticated
+with check (public.is_admin());
+
+create policy "Admins can update offices"
+on public.offices
+for update
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+create policy "Admins can delete offices"
+on public.offices
+for delete
+to authenticated
+using (public.is_admin());
