@@ -13,7 +13,6 @@ import {
   LayoutDashboard,
   Layers3,
   LogOut,
-  Menu,
   Users,
   X,
   ChevronRight,
@@ -29,19 +28,24 @@ const navItems = [
   { label: "Batches", href: "/admin/batches", icon: Layers3 },
 ];
 
-interface SidebarProps {
+type AdminSidebarProps = {
+  mobileOpen: boolean;
+  onMobileClose: () => void;
+};
+
+type SidebarContentProps = {
   pathname: string;
   onNavigate?: () => void;
   onLogout: () => void;
   isLoggingOut: boolean;
-}
+};
 
 function SidebarContent({
   pathname,
   onNavigate,
   onLogout,
   isLoggingOut,
-}: SidebarProps) {
+}: SidebarContentProps) {
   return (
     <div className="flex h-full min-h-0 flex-col bg-card">
       <div className="border-b border-border/60 px-4 py-4 sm:px-5">
@@ -124,12 +128,14 @@ function SidebarContent({
   );
 }
 
-export function AdminSidebar() {
+export function AdminSidebar({
+  mobileOpen,
+  onMobileClose,
+}: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
 
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
@@ -138,10 +144,6 @@ export function AdminSidebar() {
       document.body.style.overflow = "";
     };
   }, [mobileOpen]);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
 
   async function handleLogout() {
     setIsLoggingOut(true);
@@ -152,6 +154,7 @@ export function AdminSidebar() {
       if (error) throw error;
 
       toast.success("Logged out successfully.", { id: toastId });
+      onMobileClose();
       router.push("/login");
       router.refresh();
     } catch (error: any) {
@@ -162,30 +165,6 @@ export function AdminSidebar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur lg:hidden">
-        <Link href="/admin" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Image
-              src="/Nexora.png"
-              alt="logo"
-              width={20}
-              height={20}
-              className="brightness-0 invert"
-            />
-          </div>
-          <span className="text-sm font-semibold tracking-tight">Nexora</span>
-        </Link>
-
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card transition hover:bg-muted"
-          aria-label="Open sidebar"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-      </header>
-
       <aside className="hidden h-screen w-72 shrink-0 border-r border-border bg-card lg:sticky lg:top-0 lg:block">
         <SidebarContent
           pathname={pathname}
@@ -199,7 +178,7 @@ export function AdminSidebar() {
           <button
             type="button"
             className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
-            onClick={() => setMobileOpen(false)}
+            onClick={onMobileClose}
             aria-label="Close sidebar overlay"
           />
 
@@ -207,7 +186,7 @@ export function AdminSidebar() {
             <div className="flex items-center justify-end border-b border-border/60 p-3">
               <button
                 type="button"
-                onClick={() => setMobileOpen(false)}
+                onClick={onMobileClose}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background transition hover:bg-muted"
                 aria-label="Close sidebar"
               >
@@ -218,7 +197,7 @@ export function AdminSidebar() {
             <div className="min-h-0 flex-1">
               <SidebarContent
                 pathname={pathname}
-                onNavigate={() => setMobileOpen(false)}
+                onNavigate={onMobileClose}
                 onLogout={handleLogout}
                 isLoggingOut={isLoggingOut}
               />
