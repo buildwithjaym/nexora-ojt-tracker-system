@@ -12,6 +12,7 @@ import {
   LogOut,
   UserCircle,
   Users,
+  FileSpreadsheet,
   X,
   ChevronRight,
 } from "lucide-react";
@@ -21,6 +22,11 @@ const navItems = [
   { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
   { label: "Students", href: "/teacher/students", icon: Users },
   { label: "Assignments", href: "/teacher/assignments", icon: ClipboardList },
+  {
+    label: "Reports",
+    href: "/teacher/reports",
+    icon: FileSpreadsheet,
+  },
   { label: "Profile", href: "/teacher/profile", icon: UserCircle },
 ];
 
