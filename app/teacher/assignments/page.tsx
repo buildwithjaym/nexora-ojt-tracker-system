@@ -1,16 +1,15 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { createServerClient } from "@supabase/ssr";
 import {
   Activity,
   BriefcaseBusiness,
-  CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
   Search,
-  UserSquare2,
 } from "lucide-react";
 
 type AssignmentStatus = "pending" | "active" | "completed" | "cancelled";
@@ -257,31 +256,24 @@ export default async function TeacherAssignmentsPage({
   );
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
 
-  if (!user) {
-    return (
-      <EmptyState
-        title="Unable to load assignments"
-        message="Your session could not be verified. Please sign in again."
-      />
-    );
+  if (sessionError || !session?.user) {
+    redirect("/login");
   }
 
-  const { data: teacher } = await supabase
+  const user = session.user;
+
+  const { data: teacher, error: teacherError } = await supabase
     .from("teachers")
     .select("id")
     .eq("profile_id", user.id)
     .maybeSingle();
 
-  if (!teacher) {
-    return (
-      <EmptyState
-        title="Teacher account not found"
-        message="No matching teacher record was found for this account."
-      />
-    );
+  if (teacherError || !teacher) {
+    redirect("/login");
   }
 
   const { data: assignmentsData, error } = await supabase
@@ -386,8 +378,7 @@ export default async function TeacherAssignmentsPage({
     const matchesStatus =
       selectedStatus === "all" ? true : assignment.status === selectedStatus;
 
-    const query = searchQuery;
-    const matchesSearch = !query
+    const matchesSearch = !searchQuery
       ? true
       : [
           assignment.student_name,
@@ -400,7 +391,7 @@ export default async function TeacherAssignmentsPage({
         ]
           .join(" ")
           .toLowerCase()
-          .includes(query);
+          .includes(searchQuery);
 
     return matchesStatus && matchesSearch;
   });
