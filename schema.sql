@@ -559,3 +559,94 @@ on public.assignments(created_at desc);
 create unique index if not exists uq_assignments_one_active_per_student
 on public.assignments(student_id)
 where status in ('pending', 'active');
+
+alter table offices
+add column google_place_id text;
+
+create policy "Teachers can view themselves"
+on teachers
+for select
+to authenticated
+using (
+  profile_id = auth.uid()
+);
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'admin'
+  );
+$$;
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'admin'
+  );
+$$;
+create or replace function public.current_teacher_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select t.id
+  from public.teachers t
+  where t.profile_id = auth.uid()
+  limit 1
+$$;
+
+drop policy if exists "Teachers can view their own assignments" on public.assignments;
+
+create policy "Teachers can view their own assignments"
+on public.assignments
+for select
+to authenticated
+using (teacher_id = public.current_teacher_id());
+
+drop policy if exists "Teachers can view assigned students" on public.students;
+
+create policy "Teachers can view assigned students"
+on public.students
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.assignments a
+    where a.student_id = students.id
+      and a.teacher_id = public.current_teacher_id()
+  )
+);
+
+drop policy if exists "Teachers can view batches of assigned students" on public.batches;
+
+create policy "Teachers can view batches of assigned students"
+on public.batches
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    join public.assignments a on a.student_id = s.id
+    where s.batch_id = batches.id
+      and a.teacher_id = public.current_teacher_id()
+  )
+);
