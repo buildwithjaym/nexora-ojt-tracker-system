@@ -12,7 +12,7 @@ type StudentsPageProps = {
 const PAGE_SIZE = 10;
 
 export default async function StudentsPage({ searchParams }: StudentsPageProps) {
-  const params = await searchParams; // Await required in Next.js 15
+  const params = await searchParams; 
   const search = params.search?.trim() ?? "";
   const currentPage = Math.max(Number(params.page) || 1, 1);
   const from = (currentPage - 1) * PAGE_SIZE;
