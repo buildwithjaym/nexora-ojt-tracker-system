@@ -141,44 +141,43 @@ export default async function AssignmentsPage({
   let dataQuery = supabase
     .from("assignments")
     .select(
-      `
-      id,
-      student_id,
-      teacher_id,
-      office_id,
-      start_date,
-      end_date,
-      assigned_hours,
-      status,
-      remarks,
-      created_at,
-      students:student_id (
-        id,
-        first_name,
-        middle_name,
-        last_name,
-        suffix,
-        student_number,
-        batches:batch_id (
-          name,
-          course
-        )
-      ),
-      teachers:teacher_id (
-        id,
-        first_name,
-        middle_name,
-        last_name,
-        suffix,
-        department
-      ),
-      offices:office_id (
-        id,
-        name
-      )
-    `,
-      { count: "exact" }
+  `
+  id,
+  student_id,
+  teacher_id,
+  office_id,
+  start_date,
+  assigned_hours,
+  status,
+  remarks,
+  created_at,
+  students:student_id (
+    id,
+    first_name,
+    middle_name,
+    last_name,
+    suffix,
+    student_number,
+    batches:batch_id (
+      name,
+      course
     )
+  ),
+  teachers:teacher_id (
+    id,
+    first_name,
+    middle_name,
+    last_name,
+    suffix,
+    department
+  ),
+  offices:office_id (
+    id,
+    name
+  )
+`,
+  { count: "exact" }
+)
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -422,8 +421,7 @@ export default async function AssignmentsPage({
                     <div className="flex items-center gap-2">
                       <CalendarDays className="h-4 w-4 shrink-0" />
                       <span>
-                        {assignment.start_date || "-"} to{" "}
-                        {assignment.end_date || "-"}
+                        {assignment.start_date || "-"}
                       </span>
                     </div>
                   </div>

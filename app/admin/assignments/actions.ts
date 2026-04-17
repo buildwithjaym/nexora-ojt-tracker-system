@@ -30,7 +30,6 @@ export async function createAssignment(
   const teacher_id = cleanText(formData.get("teacher_id"));
   const office_id = cleanText(formData.get("office_id"));
   const start_date = toNullable(cleanText(formData.get("start_date")));
-  const end_date = toNullable(cleanText(formData.get("end_date")));
   const assigned_hours_raw = cleanText(formData.get("assigned_hours"));
   const status = cleanText(formData.get("status")) || "active";
   const remarks = toNullable(cleanText(formData.get("remarks")));
@@ -42,12 +41,6 @@ export async function createAssignment(
     };
   }
 
-  if (start_date && end_date && start_date > end_date) {
-    return {
-      success: false,
-      message: "End date must be after or equal to start date.",
-    };
-  }
 
   const assigned_hours =
     assigned_hours_raw.trim() === ""
@@ -131,7 +124,7 @@ export async function createAssignment(
     teacher_id,
     office_id,
     start_date,
-    end_date,
+    end_date: null,
     assigned_hours,
     status,
     remarks,
@@ -163,7 +156,6 @@ export async function updateAssignment(
   const teacher_id = cleanText(formData.get("teacher_id"));
   const office_id = cleanText(formData.get("office_id"));
   const start_date = toNullable(cleanText(formData.get("start_date")));
-  const end_date = toNullable(cleanText(formData.get("end_date")));
   const assigned_hours_raw = cleanText(formData.get("assigned_hours"));
   const status = cleanText(formData.get("status")) || "active";
   const remarks = toNullable(cleanText(formData.get("remarks")));
@@ -175,12 +167,7 @@ export async function updateAssignment(
     };
   }
 
-  if (start_date && end_date && start_date > end_date) {
-    return {
-      success: false,
-      message: "End date must be after or equal to start date.",
-    };
-  }
+ 
 
   const assigned_hours =
     assigned_hours_raw.trim() === ""
@@ -216,7 +203,7 @@ export async function updateAssignment(
       teacher_id,
       office_id,
       start_date,
-      end_date,
+      end_date: null,
       assigned_hours,
       status,
       remarks,

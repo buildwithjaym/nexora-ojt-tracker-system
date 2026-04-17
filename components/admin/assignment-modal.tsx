@@ -64,7 +64,6 @@ type AssignmentData = {
   teacher_id: string;
   office_id: string;
   start_date: string | null;
-  end_date: string | null;
   assigned_hours: number | null;
   status: string;
   remarks: string | null;
@@ -478,19 +477,6 @@ export function AssignmentModal({
                           type="date"
                           name="start_date"
                           defaultValue={assignment?.start_date ?? ""}
-                          className="w-full rounded-2xl border border-border bg-card py-3 pl-10 pr-3 text-sm outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_4px_rgba(59,130,246,0.08)]"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">End Date</label>
-                      <div className="relative">
-                        <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <input
-                          type="date"
-                          name="end_date"
-                          defaultValue={assignment?.end_date ?? ""}
                           className="w-full rounded-2xl border border-border bg-card py-3 pl-10 pr-3 text-sm outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_4px_rgba(59,130,246,0.08)]"
                         />
                       </div>
