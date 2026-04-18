@@ -11,6 +11,7 @@ import {
   Phone,
   Users,
   Activity,
+  MapPinned,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,17 +39,31 @@ type OfficeModalProps = {
   office?: OfficeData | null;
 };
 
+function isValidCoordinatePair(latitude: string, longitude: string) {
+  const lat = Number.parseFloat(latitude);
+  const lng = Number.parseFloat(longitude);
+
+  if (Number.isNaN(lat) || Number.isNaN(lng)) return false;
+  if (lat < -90 || lat > 90) return false;
+  if (lng < -180 || lng > 180) return false;
+
+  return true;
+}
+
 export function OfficeModal({ mode, office }: OfficeModalProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
+  const [address, setAddress] = useState(office?.address ?? "");
   const [latitude, setLatitude] = useState(
     office?.latitude != null ? String(office.latitude) : ""
   );
   const [longitude, setLongitude] = useState(
     office?.longitude != null ? String(office.longitude) : ""
   );
+
+  const hasValidCoords = isValidCoordinatePair(latitude, longitude);
 
   function closeModal() {
     const params = new URLSearchParams(searchParams.toString());
@@ -75,6 +90,16 @@ export function OfficeModal({ mode, office }: OfficeModalProps) {
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       toast.error("Please enter a valid contact email address.");
+      return;
+    }
+
+    if (!address.trim()) {
+      toast.error("Please provide the office address.");
+      return;
+    }
+
+    if (!hasValidCoords) {
+      toast.error("Please search or pin a valid office location on the map.");
       return;
     }
 
@@ -136,17 +161,21 @@ export function OfficeModal({ mode, office }: OfficeModalProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Address</label>
+                  <label className="text-sm font-medium">Address *</label>
                   <div className="relative">
                     <MapPin className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
                     <textarea
                       name="address"
-                      defaultValue={office?.address ?? ""}
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
                       rows={4}
                       className="w-full rounded-2xl border border-border bg-card py-3 pl-10 pr-3 text-sm outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_4px_rgba(59,130,246,0.08)]"
                       placeholder="Office address..."
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Use the map search to find the office, then adjust the pin if needed.
+                  </p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
@@ -229,8 +258,8 @@ export function OfficeModal({ mode, office }: OfficeModalProps) {
                 <div>
                   <p className="text-sm font-medium">Map Location</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Search a place or landmark, then press Enter or click Locate.
-                    You can also click directly on the map.
+                    Search a place, building, or landmark. Then choose the best result
+                    and click the map if you want to fine-tune the exact office pin.
                   </p>
                 </div>
 
@@ -242,6 +271,20 @@ export function OfficeModal({ mode, office }: OfficeModalProps) {
                     setLongitude(String(lng));
                   }}
                 />
+
+                <div className="rounded-2xl border border-border bg-card/60 p-4">
+                  <div className="flex items-start gap-3">
+                    <MapPinned className="mt-0.5 h-4 w-4 text-primary" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Pinned Coordinates</p>
+                      <p className="text-xs text-muted-foreground">
+                        {hasValidCoords
+                          ? `Latitude ${latitude}, Longitude ${longitude}`
+                          : "No valid location pinned yet."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
@@ -282,7 +325,7 @@ export function OfficeModal({ mode, office }: OfficeModalProps) {
 
               <button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || !hasValidCoords}
                 className="inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-all duration-200 hover:scale-[1.02] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isPending
