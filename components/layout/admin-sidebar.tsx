@@ -24,7 +24,7 @@ const navItems = [
   { label: "Students", href: "/admin/students", icon: Users },
   { label: "Teachers", href: "/admin/teachers", icon: GraduationCap },
   { label: "Offices", href: "/admin/offices", icon: Building2 },
-  { label: "Assignments", href: "/admin/assignments", icon: ClipboardList },
+  { label: "Assign Students", href: "/admin/assignments", icon: ClipboardList },
   { label: "Batches", href: "/admin/batches", icon: Layers3 },
 ];
 
