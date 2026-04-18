@@ -230,6 +230,9 @@ export function StudentModal({
                   pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+  This email will be used for login. Temporary password is the student number.
+</p>
               </div>
 
               <div className="space-y-2">
