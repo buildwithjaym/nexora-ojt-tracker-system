@@ -8,6 +8,8 @@ import {
   MapPin,
   ShieldCheck,
   Sparkles,
+  Sun,
+  Sunset,
   TimerReset,
 } from "lucide-react";
 import { AttendanceActionModal } from "@/components/student/attendance-action-modal";
@@ -41,6 +43,7 @@ type StudentAttendancePanelProps = {
   studentName: string;
   attendanceDate: string;
   readableDate: string;
+  initialServerTime: string;
   currentMinutes: number;
   office: {
     id: string;
@@ -55,10 +58,12 @@ type StudentAttendancePanelProps = {
 
 type EventType = "am_in" | "am_out" | "pm_in" | "pm_out";
 
-const MORNING_IN_START = 8 * 60;
-const MORNING_END = 12 * 60 + 30;
-const AFTERNOON_START = 13 * 60;
-const AFTERNOON_END = 17 * 60;
+const MORNING_START = 6 * 60;
+const MORNING_END = 12 * 60 + 29;
+
+const AFTERNOON_IN_START = 12 * 60 + 50;
+const AFTERNOON_IN_END = 17 * 60;
+const AFTERNOON_OUT_END = 18 * 60;
 
 function getActionState(
   eventType: EventType,
@@ -69,8 +74,8 @@ function getActionState(
 
   if (eventType === "am_in") {
     if (day?.am_in_at) return { enabled: false, reason: "Already recorded" };
-    if (currentMinutes < MORNING_IN_START) {
-      return { enabled: false, reason: "Starts at 8:00 AM" };
+    if (currentMinutes < MORNING_START) {
+      return { enabled: false, reason: "Starts at 6:00 AM" };
     }
     if (currentMinutes > MORNING_END) {
       return { enabled: false, reason: "Morning session closed" };
@@ -81,6 +86,9 @@ function getActionState(
   if (eventType === "am_out") {
     if (!day?.am_in_at) return { enabled: false, reason: "Time in first" };
     if (day?.am_out_at) return { enabled: false, reason: "Already recorded" };
+    if (currentMinutes < MORNING_START) {
+      return { enabled: false, reason: "Morning session not open" };
+    }
     if (currentMinutes > MORNING_END) {
       return { enabled: false, reason: "Morning session closed" };
     }
@@ -88,15 +96,12 @@ function getActionState(
   }
 
   if (eventType === "pm_in") {
-    if (!day?.am_in_at || !day?.am_out_at) {
-      return { enabled: false, reason: "Complete morning first" };
-    }
     if (day?.pm_in_at) return { enabled: false, reason: "Already recorded" };
-    if (currentMinutes < AFTERNOON_START) {
-      return { enabled: false, reason: "Starts at 1:00 PM" };
+    if (currentMinutes < AFTERNOON_IN_START) {
+      return { enabled: false, reason: "Starts at 12:50 PM" };
     }
-    if (currentMinutes > AFTERNOON_END) {
-      return { enabled: false, reason: "Afternoon session closed" };
+    if (currentMinutes > AFTERNOON_IN_END) {
+      return { enabled: false, reason: "PM time in closed" };
     }
     return { enabled: true, reason: "Available now" };
   }
@@ -104,11 +109,11 @@ function getActionState(
   if (eventType === "pm_out") {
     if (!day?.pm_in_at) return { enabled: false, reason: "Time in first" };
     if (day?.pm_out_at) return { enabled: false, reason: "Already recorded" };
-    if (currentMinutes < AFTERNOON_START) {
-      return { enabled: false, reason: "Starts at 1:00 PM" };
+    if (currentMinutes < AFTERNOON_IN_START) {
+      return { enabled: false, reason: "Starts at 12:50 PM" };
     }
-    if (currentMinutes > AFTERNOON_END) {
-      return { enabled: false, reason: "Afternoon session closed" };
+    if (currentMinutes > AFTERNOON_OUT_END) {
+      return { enabled: false, reason: "PM time out closed" };
     }
     return { enabled: true, reason: "Available now" };
   }
@@ -133,10 +138,30 @@ function formatWorkHours(seconds: number) {
   return `${totalHours}h ${totalMinutes}m`;
 }
 
+function getStatusTone(logged: boolean) {
+  if (logged) {
+    return "border-primary/25 bg-primary/10 shadow-[0_0_30px_rgba(59,130,246,0.08)]";
+  }
+  return "border-border bg-card";
+}
+
+function getButtonTone(enabled: boolean, variant: "in" | "out") {
+  if (!enabled) {
+    return "cursor-not-allowed border border-border bg-background text-muted-foreground opacity-60";
+  }
+
+  if (variant === "in") {
+    return "bg-primary text-primary-foreground hover:opacity-90";
+  }
+
+  return "bg-foreground text-background hover:opacity-90";
+}
+
 export function StudentAttendancePanel({
   studentName,
   attendanceDate,
   readableDate,
+  initialServerTime,
   currentMinutes,
   office,
   todayAttendance,
@@ -159,11 +184,41 @@ export function StudentAttendancePanel({
     label: string;
     variant: "in" | "out";
     loggedAt: string | null;
+    icon: React.ComponentType<{ className?: string }>;
+    period: "Morning" | "Afternoon";
   }[] = [
-    { key: "am_in", label: "Morning Time In", variant: "in", loggedAt: todayAttendance?.am_in_at ?? null },
-    { key: "am_out", label: "Morning Time Out", variant: "out", loggedAt: todayAttendance?.am_out_at ?? null },
-    { key: "pm_in", label: "Afternoon Time In", variant: "in", loggedAt: todayAttendance?.pm_in_at ?? null },
-    { key: "pm_out", label: "Afternoon Time Out", variant: "out", loggedAt: todayAttendance?.pm_out_at ?? null },
+    {
+      key: "am_in",
+      label: "Morning Time In",
+      variant: "in",
+      loggedAt: todayAttendance?.am_in_at ?? null,
+      icon: Sun,
+      period: "Morning",
+    },
+    {
+      key: "am_out",
+      label: "Morning Time Out",
+      variant: "out",
+      loggedAt: todayAttendance?.am_out_at ?? null,
+      icon: TimerReset,
+      period: "Morning",
+    },
+    {
+      key: "pm_in",
+      label: "Afternoon Time In",
+      variant: "in",
+      loggedAt: todayAttendance?.pm_in_at ?? null,
+      icon: Sunset,
+      period: "Afternoon",
+    },
+    {
+      key: "pm_out",
+      label: "Afternoon Time Out",
+      variant: "out",
+      loggedAt: todayAttendance?.pm_out_at ?? null,
+      icon: TimerReset,
+      period: "Afternoon",
+    },
   ];
 
   return (
@@ -185,10 +240,13 @@ export function StudentAttendancePanel({
               </h2>
 
               <p className="mt-2 text-sm text-muted-foreground">{readableDate}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.16em] text-primary">
+                Attendance Date • {attendanceDate}
+              </p>
 
               <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5">
                 <Clock3 className="h-4 w-4 text-primary" />
-                <ManilaLiveClock />
+                <ManilaLiveClock initialTime={initialServerTime} />
               </div>
             </div>
 
@@ -205,14 +263,17 @@ export function StudentAttendancePanel({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:w-[420px]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:w-[440px]">
             <div className="rounded-2xl border border-border bg-background p-4 transition hover:border-primary/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.08)]">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <ShieldCheck className="h-4 w-4" />
-                <p className="text-xs uppercase tracking-wide">Server Time</p>
+                <p className="text-xs uppercase tracking-wide">Automatic Time</p>
               </div>
               <p className="mt-2 text-sm font-medium">
-                Time is populated automatically by the server.
+                The server sets the official time automatically.
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Students cannot manually edit their attendance time.
               </p>
             </div>
 
@@ -222,7 +283,10 @@ export function StudentAttendancePanel({
                 <p className="text-xs uppercase tracking-wide">Photo Proof</p>
               </div>
               <p className="mt-2 text-sm font-medium">
-                Camera-first with image compression before upload.
+                Camera-first with compression before upload.
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                This helps reduce storage usage while keeping records valid.
               </p>
             </div>
           </div>
@@ -233,23 +297,43 @@ export function StudentAttendancePanel({
         {cards.map((card) => {
           const state = states[card.key];
           const logged = !!card.loggedAt;
+          const Icon = card.icon;
 
           return (
             <div
               key={card.key}
-              className={`rounded-[1.5rem] border p-5 shadow-sm transition ${
-                logged
-                  ? "border-primary/25 bg-primary/10 shadow-[0_0_30px_rgba(59,130,246,0.08)]"
-                  : "border-border bg-card"
-              }`}
+              className={`rounded-[1.5rem] border p-5 shadow-sm transition ${getStatusTone(logged)}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                    {card.variant === "in" ? "Time In" : "Time Out"}
+                    {card.period}
                   </p>
                   <h3 className="mt-2 text-lg font-semibold">{card.label}</h3>
                 </div>
+
+                <div
+                  className={`flex h-10 w-10 items-center justify-center rounded-2xl ${
+                    logged
+                      ? "bg-primary text-primary-foreground"
+                      : "border border-border bg-background text-muted-foreground"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-border/70 bg-background px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                  Logged Time
+                </p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {formatLogged(card.loggedAt)}
+                </p>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">{state.reason}</p>
 
                 <div
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -262,26 +346,14 @@ export function StudentAttendancePanel({
                 </div>
               </div>
 
-              <p className="mt-4 text-sm text-muted-foreground">
-                Logged Time:{" "}
-                <span className="font-medium text-foreground">
-                  {formatLogged(card.loggedAt)}
-                </span>
-              </p>
-
-              <p className="mt-2 text-xs text-muted-foreground">{state.reason}</p>
-
               <button
                 type="button"
                 disabled={!state.enabled}
                 onClick={() => setOpenEvent(card.key)}
-                className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                  state.enabled
-                    ? card.variant === "in"
-                      ? "bg-primary text-primary-foreground hover:opacity-90"
-                      : "bg-foreground text-background hover:opacity-90"
-                    : "cursor-not-allowed border border-border bg-background text-muted-foreground opacity-60"
-                }`}
+                className={`mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition ${getButtonTone(
+                  state.enabled,
+                  card.variant
+                )}`}
               >
                 {card.variant === "in" ? (
                   <>
@@ -305,25 +377,39 @@ export function StudentAttendancePanel({
           <div className="mb-5">
             <p className="text-sm font-medium">Today Overview</p>
             <p className="text-xs text-muted-foreground">
-              Your attendance flow resets for the afternoon after the morning window closes.
+              Morning and afternoon are treated as separate sessions. Afternoon time in does not require morning data.
             </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl border border-border bg-background p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Morning</p>
-              <p className="mt-2 text-sm">In: {formatLogged(todayAttendance?.am_in_at ?? null)}</p>
-              <p className="text-sm">Out: {formatLogged(todayAttendance?.am_out_at ?? null)}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Morning
+              </p>
+              <p className="mt-2 text-sm">
+                In: {formatLogged(todayAttendance?.am_in_at ?? null)}
+              </p>
+              <p className="text-sm">
+                Out: {formatLogged(todayAttendance?.am_out_at ?? null)}
+              </p>
             </div>
 
             <div className="rounded-2xl border border-border bg-background p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Afternoon</p>
-              <p className="mt-2 text-sm">In: {formatLogged(todayAttendance?.pm_in_at ?? null)}</p>
-              <p className="text-sm">Out: {formatLogged(todayAttendance?.pm_out_at ?? null)}</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Afternoon
+              </p>
+              <p className="mt-2 text-sm">
+                In: {formatLogged(todayAttendance?.pm_in_at ?? null)}
+              </p>
+              <p className="text-sm">
+                Out: {formatLogged(todayAttendance?.pm_out_at ?? null)}
+              </p>
             </div>
 
             <div className="rounded-2xl border border-border bg-background p-4 sm:col-span-2">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Today Work Time</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Today Work Time
+              </p>
               <p className="mt-2 text-base font-semibold">
                 {formatWorkHours(Number(todayAttendance?.total_work_seconds ?? 0))}
               </p>
@@ -349,7 +435,9 @@ export function StudentAttendancePanel({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium">{log.attendance_date}</p>
-                      <p className="text-xs capitalize text-muted-foreground">{log.status}</p>
+                      <p className="text-xs capitalize text-muted-foreground">
+                        {log.status}
+                      </p>
                     </div>
 
                     <div className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
