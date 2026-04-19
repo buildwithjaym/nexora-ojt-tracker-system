@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AlertTriangle, BriefcaseBusiness, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { StudentAttendancePanel } from "@/components/student/student-attendance-panel";
 
@@ -21,7 +22,12 @@ function getManilaTimeParts(date = new Date()) {
 
   const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
   const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
-  return { hour, minute, totalMinutes: hour * 60 + minute };
+
+  return {
+    hour,
+    minute,
+    totalMinutes: hour * 60 + minute,
+  };
 }
 
 function getReadableDate(date = new Date()) {
@@ -32,6 +38,50 @@ function getReadableDate(date = new Date()) {
     month: "long",
     day: "numeric",
   }).format(date);
+}
+
+function getReadableTime(date = new Date()) {
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(date);
+}
+
+function EmptyState({
+  title,
+  message,
+  icon,
+}: {
+  title: string;
+  message: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-6">
+      <section className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div className="flex items-start gap-4">
+          {icon ? (
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+              {icon}
+            </div>
+          ) : null}
+
+          <div className="max-w-2xl">
+            <p className="text-sm text-muted-foreground">Student Attendance</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {title}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
+              {message}
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 export default async function StudentAttendancePage() {
@@ -45,13 +95,19 @@ export default async function StudentAttendancePage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
+  const now = new Date();
+  const attendanceDate = getManilaDateKey(now);
+  const readableDate = getReadableDate(now);
+  const readableTime = getReadableTime(now);
+  const manilaTime = getManilaTimeParts(now);
+
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id, role, is_active")
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "student" || !profile.is_active) {
+  if (profileError || !profile || profile.role !== "student" || !profile.is_active) {
     redirect("/login");
   }
 
@@ -63,20 +119,15 @@ export default async function StudentAttendancePage() {
 
   if (studentError || !student) {
     return (
-      <div className="space-y-6">
-        <section className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm sm:p-6">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Student account setup incomplete
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            Your student record is not accessible yet.
-          </p>
-        </section>
-      </div>
+      <EmptyState
+        title="Student account setup incomplete"
+        message="Your student record is not accessible yet. Please contact your administrator if this continues."
+        icon={<AlertTriangle className="h-5 w-5" />}
+      />
     );
   }
 
-  const { data: assignment } = await supabase
+  const { data: assignment, error: assignmentError } = await supabase
     .from("assignments")
     .select(`
       id,
@@ -97,18 +148,13 @@ export default async function StudentAttendancePage() {
     .eq("status", "active")
     .maybeSingle();
 
-  if (!assignment) {
+  if (assignmentError || !assignment) {
     return (
-      <div className="space-y-6">
-        <section className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm sm:p-6">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            No active assignment
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            You need an active assignment before using attendance.
-          </p>
-        </section>
-      </div>
+      <EmptyState
+        title="No active assignment"
+        message="You need an active assignment before using attendance. Please contact your coordinator or administrator."
+        icon={<BriefcaseBusiness className="h-5 w-5" />}
+      />
     );
   }
 
@@ -118,24 +164,15 @@ export default async function StudentAttendancePage() {
 
   if (!office) {
     return (
-      <div className="space-y-6">
-        <section className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm sm:p-6">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Office details missing
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-muted-foreground">
-            Your assigned office could not be loaded.
-          </p>
-        </section>
-      </div>
+      <EmptyState
+        title="Office details missing"
+        message="Your assigned office could not be loaded. Please contact your administrator to complete your attendance setup."
+        icon={<MapPin className="h-5 w-5" />}
+      />
     );
   }
 
-  const attendanceDate = getManilaDateKey();
-  const readableDate = getReadableDate();
-  const manilaTime = getManilaTimeParts();
-
-  const { data: todayAttendance } = await supabase
+  const { data: todayAttendance, error: todayAttendanceError } = await supabase
     .from("attendance_days")
     .select(`
       id,
@@ -153,7 +190,17 @@ export default async function StudentAttendancePage() {
     .eq("attendance_date", attendanceDate)
     .maybeSingle();
 
-  const { data: recentLogs } = await supabase
+  if (todayAttendanceError) {
+    return (
+      <EmptyState
+        title="Unable to load attendance"
+        message="Your attendance record for today could not be loaded. Please refresh the page or try again later."
+        icon={<AlertTriangle className="h-5 w-5" />}
+      />
+    );
+  }
+
+  const { data: recentLogs, error: recentLogsError } = await supabase
     .from("attendance_days")
     .select(`
       id,
@@ -174,6 +221,7 @@ export default async function StudentAttendancePage() {
       studentName={`${student.first_name} ${student.last_name}`}
       attendanceDate={attendanceDate}
       readableDate={readableDate}
+      initialServerTime={readableTime}
       currentMinutes={manilaTime.totalMinutes}
       office={{
         id: office.id,
@@ -183,7 +231,7 @@ export default async function StudentAttendancePage() {
       }}
       assignmentId={assignment.id}
       todayAttendance={todayAttendance}
-      recentLogs={recentLogs ?? []}
+      recentLogs={recentLogsError ? [] : recentLogs ?? []}
     />
   );
 }
