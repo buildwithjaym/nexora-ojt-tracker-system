@@ -50,6 +50,8 @@ type StudentAttendancePanelProps = {
     name: string;
     address: string;
     allowedRadiusMeters: number;
+    latitude: number;
+    longitude: number;
   };
   assignmentId: string;
   todayAttendance: AttendanceDay;
@@ -61,9 +63,9 @@ type EventType = "am_in" | "am_out" | "pm_in" | "pm_out";
 const MORNING_START = 6 * 60;
 const MORNING_END = 12 * 60 + 29;
 
-const AFTERNOON_IN_START = 22 * 60;
-const AFTERNOON_IN_END = 23 * 60;
-const AFTERNOON_OUT_END = 23 * 60 + 30;
+const AFTERNOON_IN_START = 12 * 60 + 50;
+const AFTERNOON_IN_END = 17 * 60;
+const AFTERNOON_OUT_END = 18 * 60;
 
 function getActionState(
   eventType: EventType,
@@ -280,13 +282,13 @@ export function StudentAttendancePanel({
             <div className="rounded-2xl border border-border bg-background p-4 transition hover:border-primary/20 hover:shadow-[0_0_30px_rgba(59,130,246,0.08)]">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Camera className="h-4 w-4" />
-                <p className="text-xs uppercase tracking-wide">Photo Proof</p>
+                <p className="text-xs uppercase tracking-wide">Exact Location</p>
               </div>
               <p className="mt-2 text-sm font-medium">
-                Camera-first with compression before upload.
+                Multi-sample GPS capture before every attendance action.
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                This helps reduce storage usage while keeping records valid.
+                Submission requires fresh, accurate, and in-range location.
               </p>
             </div>
           </div>
@@ -377,7 +379,8 @@ export function StudentAttendancePanel({
           <div className="mb-5">
             <p className="text-sm font-medium">Today Overview</p>
             <p className="text-xs text-muted-foreground">
-              Morning and afternoon are treated as separate sessions. Afternoon time in does not require morning data.
+              Morning and afternoon are treated as separate sessions. Afternoon time
+              in does not require morning data.
             </p>
           </div>
 
@@ -465,6 +468,8 @@ export function StudentAttendancePanel({
           officeName={office.name}
           officeAddress={office.address}
           allowedRadiusMeters={office.allowedRadiusMeters}
+          officeLatitude={office.latitude}
+          officeLongitude={office.longitude}
           onClose={() => setOpenEvent(null)}
         />
       )}

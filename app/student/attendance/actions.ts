@@ -33,9 +33,9 @@ type EventType = "am_in" | "am_out" | "pm_in" | "pm_out";
 const MORNING_START = 6 * 60;
 const MORNING_END = 12 * 60 + 29;
 
-const AFTERNOON_IN_START = 22 * 60;
-const AFTERNOON_IN_END = 23 * 60 + 50;
-const AFTERNOON_OUT_END = 23 * 60 + 59;
+const AFTERNOON_IN_START = 12 * 60 + 50;
+const AFTERNOON_IN_END = 17 * 60;
+const AFTERNOON_OUT_END = 18 * 60;
 
 function getManilaDateKey(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -152,16 +152,6 @@ function getSecondsDiff(start: string | null, end: Date) {
   return Math.max(diff, 0);
 }
 
-/**
- * Business logic:
- *
- * Morning:
- * - AM out requires AM in
- *
- * Afternoon:
- * - PM in is independent from morning
- * - PM out requires PM in
- */
 function validateWindow(
   eventType: EventType,
   nowMinutes: number,
@@ -263,6 +253,10 @@ export async function recordAttendance(
     return { success: false, message: "Location is required." };
   }
 
+  if (accuracyMeters === null) {
+    return { success: false, message: "Location accuracy is required." };
+  }
+
   if (!photoFile) {
     return { success: false, message: "A photo is required." };
   }
@@ -317,6 +311,17 @@ export async function recordAttendance(
   }
 
   const maxDistance = Number(office.allowed_radius_meters ?? 50);
+  const maxAcceptedAccuracy = Math.min(30, maxDistance);
+
+  if (accuracyMeters > maxAcceptedAccuracy) {
+    return {
+      success: false,
+      message: `Weak GPS signal detected (${accuracyMeters.toFixed(
+        1
+      )}m accuracy). Please move to an open area and try again.`,
+    };
+  }
+
   const distanceMeters = haversineMeters(
     latitude,
     longitude,

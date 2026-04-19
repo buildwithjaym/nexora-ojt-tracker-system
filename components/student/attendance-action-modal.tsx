@@ -8,6 +8,7 @@ import {
   ImagePlus,
   Loader2,
   MapPin,
+  RefreshCcw,
   ScanFace,
   ShieldAlert,
   Sparkles,
@@ -24,8 +25,32 @@ type AttendanceActionModalProps = {
   officeName: string;
   officeAddress: string;
   allowedRadiusMeters: number;
+  officeLatitude: number;
+  officeLongitude: number;
   onClose: () => void;
 };
+
+type ReadyLocationState = {
+  status: "ready";
+  message: string;
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  distanceMeters: number;
+  capturedAt: number;
+  sampleCount: number;
+};
+
+type LocationState =
+  | {
+      status: "idle" | "loading";
+      message: string;
+    }
+  | ReadyLocationState
+  | {
+      status: "error";
+      message: string;
+    };
 
 function getTitle(eventType: EventType) {
   switch (eventType) {
@@ -67,6 +92,50 @@ function getAccentClasses(eventType: EventType) {
     button: "bg-foreground text-background hover:opacity-90",
     glow: "bg-foreground/10",
   };
+}
+
+function haversineMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+) {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const earthRadius = 6371000;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadius * c;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getAccuracyLabel(accuracy: number) {
+  if (accuracy <= 15) {
+    return { tone: "text-emerald-600", text: "Excellent GPS accuracy" };
+  }
+  if (accuracy <= 30) {
+    return { tone: "text-primary", text: "Good GPS accuracy" };
+  }
+  if (accuracy <= 50) {
+    return { tone: "text-amber-600", text: "Weak GPS accuracy" };
+  }
+  return { tone: "text-red-600", text: "Very weak GPS accuracy" };
+}
+
+function getMaxAcceptedAccuracy(allowedRadiusMeters: number) {
+  return Math.min(30, allowedRadiusMeters);
 }
 
 async function compressImage(
@@ -125,20 +194,28 @@ export function AttendanceActionModal({
   officeName,
   officeAddress,
   allowedRadiusMeters,
+  officeLatitude,
+  officeLongitude,
   onClose,
 }: AttendanceActionModalProps) {
   const [activitySummary, setActivitySummary] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [locationLabel, setLocationLabel] = useState(
-    "Location will be captured automatically when you confirm."
-  );
+  const [locationState, setLocationState] = useState<LocationState>({
+    status: "idle",
+    message: "Preparing secure location capture...",
+  });
   const [isPending, startTransition] = useTransition();
+  const [isLocating, setIsLocating] = useState(false);
 
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const accent = useMemo(() => getAccentClasses(eventType), [eventType]);
+  const maxAcceptedAccuracy = useMemo(
+    () => getMaxAcceptedAccuracy(allowedRadiusMeters),
+    [allowedRadiusMeters]
+  );
 
   useEffect(() => {
     if (!selectedFile) {
@@ -149,12 +226,15 @@ export function AttendanceActionModal({
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
 
-    return () => {
-      URL.revokeObjectURL(url);
-    };
+    return () => URL.revokeObjectURL(url);
   }, [selectedFile]);
 
-  async function getCurrentPosition() {
+  useEffect(() => {
+    void captureBestLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function getSinglePosition() {
     if (!navigator.geolocation) {
       throw new Error("Geolocation is not supported on this device.");
     }
@@ -162,10 +242,96 @@ export function AttendanceActionModal({
     return new Promise<GeolocationPosition>((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
         enableHighAccuracy: true,
-        timeout: 20000,
+        timeout: 15000,
         maximumAge: 0,
       });
     });
+  }
+
+  async function captureBestLocation() {
+    if (isLocating) return;
+
+    setIsLocating(true);
+    setLocationState({
+      status: "loading",
+      message: "Getting your live location with high accuracy...",
+    });
+
+    try {
+      const samples: GeolocationPosition[] = [];
+      const sampleCount = 4;
+
+      for (let i = 0; i < sampleCount; i++) {
+        setLocationState({
+          status: "loading",
+          message: `Capturing location sample ${i + 1} of ${sampleCount}...`,
+        });
+
+        const position = await getSinglePosition();
+        samples.push(position);
+
+        if (i < sampleCount - 1) {
+          await wait(1200);
+        }
+      }
+
+      samples.sort(
+        (a, b) =>
+          (a.coords.accuracy ?? Number.POSITIVE_INFINITY) -
+          (b.coords.accuracy ?? Number.POSITIVE_INFINITY)
+      );
+
+      const best = samples[0];
+      const { latitude, longitude, accuracy } = best.coords;
+
+      const distanceMeters = haversineMeters(
+        latitude,
+        longitude,
+        officeLatitude,
+        officeLongitude
+      );
+
+      const accuracyMeta = getAccuracyLabel(accuracy);
+      const withinRadius = distanceMeters <= allowedRadiusMeters;
+
+      const message = withinRadius
+        ? `${accuracyMeta.text} • about ${distanceMeters.toFixed(1)}m from office`
+        : `${accuracyMeta.text} • about ${distanceMeters.toFixed(
+            1
+          )}m from office (outside allowed area)`;
+
+      setLocationState({
+        status: "ready",
+        message,
+        latitude,
+        longitude,
+        accuracy,
+        distanceMeters,
+        capturedAt: Date.now(),
+        sampleCount,
+      });
+    } catch (error: any) {
+      let message =
+        "Unable to get your location. Please allow precise location and try again.";
+
+      if (error?.code === 1) {
+        message =
+          "Location permission was denied. Please allow location access in your browser and device settings.";
+      } else if (error?.code === 2) {
+        message =
+          "Your location could not be determined. Move to an open area and turn on precise location.";
+      } else if (error?.code === 3) {
+        message =
+          "Location request timed out. Please check your signal and try again.";
+      }
+
+      setLocationState({
+        status: "error",
+        message,
+      });
+    } finally {
+      setIsLocating(false);
+    }
   }
 
   function handleTakePicture() {
@@ -186,7 +352,26 @@ export function AttendanceActionModal({
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function handleSubmit() {
+  const locationReady = locationState.status === "ready";
+  const readyLocation = locationReady ? locationState : null;
+
+  const locationIsFresh =
+    !!readyLocation && Date.now() - readyLocation.capturedAt <= 60_000;
+  const locationWithinRadius =
+    !!readyLocation && readyLocation.distanceMeters <= allowedRadiusMeters;
+  const locationAccuracyAcceptable =
+    !!readyLocation && readyLocation.accuracy <= maxAcceptedAccuracy;
+
+  const canSubmit =
+    !!selectedFile &&
+    !!activitySummary.trim() &&
+    !!readyLocation &&
+    locationIsFresh &&
+    locationWithinRadius &&
+    locationAccuracyAcceptable &&
+    !isPending;
+
+  async function handleSubmit() {
     if (!selectedFile) {
       toast.error("Please take or choose a photo first.", {
         description: "A photo proof is required before submitting attendance.",
@@ -201,25 +386,52 @@ export function AttendanceActionModal({
       return;
     }
 
+    if (!readyLocation) {
+      toast.error("Location is not ready yet.", {
+        description: "Please wait for the GPS capture to finish or retry.",
+      });
+      return;
+    }
+
+    if (!locationIsFresh) {
+      toast.error("Location is already stale.", {
+        description: "Please refresh your location before submitting.",
+      });
+      return;
+    }
+
+    if (!locationAccuracyAcceptable) {
+      toast.error("GPS accuracy is too weak.", {
+        description: `Current accuracy is ${Math.round(
+          readyLocation.accuracy
+        )}m. Required accuracy is ${maxAcceptedAccuracy}m or better.`,
+      });
+      return;
+    }
+
+    if (!locationWithinRadius) {
+      toast.error("You appear to be outside the allowed office radius.", {
+        description: `Current estimate is ${readyLocation.distanceMeters.toFixed(
+          1
+        )}m from the office. Allowed distance is ${allowedRadiusMeters}m.`,
+      });
+      return;
+    }
+
     const loadingId = toast.loading(`Processing ${getTitle(eventType)}...`, {
-      description: "Capturing location, compressing image, and saving your record.",
+      description:
+        "Validating location, compressing image, and saving your record.",
     });
 
     startTransition(async () => {
       try {
         const compressed = await compressImage(selectedFile);
-        const position = await getCurrentPosition();
-        const { latitude, longitude, accuracy } = position.coords;
-
-        setLocationLabel(
-          `Location captured successfully • accuracy ${Math.round(accuracy)}m`
-        );
 
         const formData = new FormData();
         formData.append("event_type", eventType);
-        formData.append("latitude", String(latitude));
-        formData.append("longitude", String(longitude));
-        formData.append("accuracy_meters", String(accuracy));
+        formData.append("latitude", String(readyLocation.latitude));
+        formData.append("longitude", String(readyLocation.longitude));
+        formData.append("accuracy_meters", String(readyLocation.accuracy));
         formData.append("activity_summary", activitySummary.trim());
         formData.append("photo", compressed);
         formData.append(
@@ -228,6 +440,11 @@ export function AttendanceActionModal({
             userAgent: navigator.userAgent,
             platform: navigator.platform,
             language: navigator.language,
+            locationCapturedAt: new Date(
+              readyLocation.capturedAt
+            ).toISOString(),
+            locationSampleCount: readyLocation.sampleCount,
+            approximateDistanceMeters: readyLocation.distanceMeters,
           })
         );
 
@@ -287,7 +504,8 @@ export function AttendanceActionModal({
               {getTitle(eventType)}
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Capture your photo, location, and activity summary in one step.
+              Capture your photo, exact location, and activity summary in one
+              step.
             </p>
           </div>
 
@@ -319,17 +537,25 @@ export function AttendanceActionModal({
             </div>
 
             <div className="rounded-2xl border border-border bg-card p-4">
-              <label className="mb-2 block text-sm font-medium">
-                What did you do?
-              </label>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label className="block text-sm font-medium">
+                  What did you do?
+                </label>
+                <span className="text-xs text-muted-foreground">
+                  {activitySummary.trim().length}/300
+                </span>
+              </div>
+
               <textarea
                 value={activitySummary}
+                maxLength={300}
                 onChange={(e) => setActivitySummary(e.target.value)}
                 placeholder="Briefly describe your work, activity, or task..."
                 className="min-h-[130px] w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary"
               />
               <p className="mt-2 text-xs text-muted-foreground">
-                Keep it short and clear so your attendance record is easier to review.
+                Keep it short and clear so your attendance record is easier to
+                review.
               </p>
             </div>
 
@@ -377,7 +603,8 @@ export function AttendanceActionModal({
               </div>
 
               <p className="mt-3 text-xs text-muted-foreground">
-                Camera-first is recommended. Images are compressed automatically before upload.
+                Camera-first is recommended. Images are compressed automatically
+                before upload.
               </p>
 
               {previewUrl ? (
@@ -423,7 +650,9 @@ export function AttendanceActionModal({
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <Camera className="h-5 w-5" />
                   </div>
-                  <p className="mt-3 text-sm font-medium">No photo selected yet</p>
+                  <p className="mt-3 text-sm font-medium">
+                    No photo selected yet
+                  </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Take a picture or choose an image file to continue.
                   </p>
@@ -434,16 +663,100 @@ export function AttendanceActionModal({
             <div className="rounded-2xl border border-border bg-card p-4">
               <div className="flex items-start gap-3">
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">
-                    Time and location are automatic
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium">
+                        Secure location capture
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        We collect multiple high-accuracy GPS readings and keep
+                        the best one before submission.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={captureBestLocation}
+                      disabled={isLocating || isPending}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 text-xs font-medium transition hover:bg-muted disabled:opacity-60"
+                    >
+                      {isLocating ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Locating...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCcw className="h-3.5 w-3.5" />
+                          Refresh location
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {locationState.message}
                   </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    The system captures your live location and uses the server time to prevent manual editing.
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {locationLabel}
-                  </p>
+
+                  {readyLocation ? (
+                    <>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-2xl border border-border bg-background p-3">
+                          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                            Accuracy
+                          </p>
+                          <p className="mt-1 text-sm font-medium">
+                            {Math.round(readyLocation.accuracy)}m
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-background p-3">
+                          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                            Distance
+                          </p>
+                          <p className="mt-1 text-sm font-medium">
+                            {readyLocation.distanceMeters.toFixed(1)}m
+                          </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-border bg-background p-3">
+                          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                            Samples
+                          </p>
+                          <p className="mt-1 text-sm font-medium">
+                            {readyLocation.sampleCount}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 space-y-1 text-xs">
+                        <p className={getAccuracyLabel(readyLocation.accuracy).tone}>
+                          {getAccuracyLabel(readyLocation.accuracy).text}
+                          {readyLocation.accuracy > maxAcceptedAccuracy
+                            ? ` • required ${maxAcceptedAccuracy}m or better`
+                            : " • accepted"}
+                        </p>
+
+                        <p
+                          className={
+                            readyLocation.distanceMeters <= allowedRadiusMeters
+                              ? "text-primary"
+                              : "text-red-600"
+                          }
+                        >
+                          {readyLocation.distanceMeters <= allowedRadiusMeters
+                            ? "Inside allowed office radius"
+                            : `Outside allowed office radius of ${allowedRadiusMeters}m`}
+                        </p>
+
+                        <p className="text-muted-foreground">
+                          Location must be captured within the last 60 seconds
+                          before submission.
+                        </p>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -456,7 +769,8 @@ export function AttendanceActionModal({
                   <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                     <li>• Capture or choose a photo</li>
                     <li>• Enter your activity summary</li>
-                    <li>• Confirm and let the system fetch your location</li>
+                    <li>• Wait for strong GPS accuracy or refresh location</li>
+                    <li>• Confirm only when you are inside the allowed radius</li>
                     <li>• Server records the official time automatically</li>
                   </ul>
                 </div>
@@ -475,7 +789,7 @@ export function AttendanceActionModal({
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={isPending}
+                disabled={!canSubmit}
                 className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60 ${accent.button}`}
               >
                 {isPending ? (
