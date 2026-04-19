@@ -33,9 +33,9 @@ type EventType = "am_in" | "am_out" | "pm_in" | "pm_out";
 const MORNING_START = 6 * 60;
 const MORNING_END = 12 * 60 + 29;
 
-const AFTERNOON_IN_START = 12 * 60 + 50;
-const AFTERNOON_IN_END = 17 * 60;
-const AFTERNOON_OUT_END = 18 * 60;
+const AFTERNOON_IN_START = 22 * 60;
+const AFTERNOON_IN_END = 23 * 60;
+const AFTERNOON_OUT_END = 23 * 60 + 30;
 
 function getManilaDateKey(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
