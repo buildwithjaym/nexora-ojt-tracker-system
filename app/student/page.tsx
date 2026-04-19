@@ -16,15 +16,13 @@ import { createClient } from "@/lib/supabase/server";
 import { ManilaLiveClock } from "@/components/student/manila-live-clock";
 import { StudentWelcomeToast } from "@/components/student/student-welcome-toast";
 
-function getManilaDateInfo() {
-  const now = new Date();
-
+function getManilaDateInfo(date = new Date()) {
   const attendanceDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Manila",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(now);
+  }).format(date);
 
   const readableDate = new Intl.DateTimeFormat("en-PH", {
     timeZone: "Asia/Manila",
@@ -32,18 +30,26 @@ function getManilaDateInfo() {
     year: "numeric",
     month: "long",
     day: "numeric",
-  }).format(now);
+  }).format(date);
 
-  return { attendanceDate, readableDate };
+  const readableTime = new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(date);
+
+  return { attendanceDate, readableDate, readableTime };
 }
 
-function getGreeting(name: string) {
+function getGreeting(name: string, date = new Date()) {
   const hour = Number(
     new Intl.DateTimeFormat("en-US", {
       timeZone: "Asia/Manila",
       hour: "numeric",
       hour12: false,
-    }).format(new Date())
+    }).format(date)
   );
 
   if (hour < 12) return `Good morning, ${name}`;
@@ -109,7 +115,8 @@ export default async function StudentDashboardPage() {
     redirect("/login");
   }
 
-  const { attendanceDate, readableDate } = getManilaDateInfo();
+  const now = new Date();
+  const { attendanceDate, readableDate, readableTime } = getManilaDateInfo(now);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -282,14 +289,14 @@ export default async function StudentDashboardPage() {
               </div>
 
               <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-                {getGreeting(firstName)}
+                {getGreeting(firstName, now)}
               </h2>
 
               <p className="mt-2 text-sm text-muted-foreground">{readableDate}</p>
 
               <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5">
                 <Clock3 className="h-4 w-4 text-primary" />
-                <ManilaLiveClock />
+                <ManilaLiveClock initialTime={readableTime} />
               </div>
             </div>
 
