@@ -18,10 +18,24 @@ type AttendanceResult =
 
 type EventType = "am_in" | "am_out" | "pm_in" | "pm_out";
 
-const MORNING_IN_START = 6 * 60;            //6:00AM
-const MORNING_END = 12 * 60 + 30;          // 12:30PM
-const AFTERNOON_START = 19 *60 * 22;      // 12:50 PM
-const AFTERNOON_END = 20 * 60;            // 5:00 PM
+/**
+ * Time rules in Manila time
+ *
+ * Morning:
+ * - Time in starts at 6:00 AM
+ * - Morning actions end at 12:29 PM
+ *
+ * Afternoon:
+ * - Time in starts at 12:50 PM
+ * - PM time in closes at 5:00 PM
+ * - PM time out can continue until 6:00 PM
+ */
+const MORNING_START = 6 * 60;
+const MORNING_END = 12 * 60 + 29;
+
+const AFTERNOON_IN_START = 12 * 60 + 50;
+const AFTERNOON_IN_END = 17 * 60;
+const AFTERNOON_OUT_END = 18 * 60;
 
 function getManilaDateKey(date = new Date()) {
   return new Intl.DateTimeFormat("en-CA", {
@@ -42,6 +56,7 @@ function getManilaMinutes(date = new Date()) {
 
   const hour = Number(parts.find((p) => p.type === "hour")?.value ?? "0");
   const minute = Number(parts.find((p) => p.type === "minute")?.value ?? "0");
+
   return hour * 60 + minute;
 }
 
@@ -137,56 +152,63 @@ function getSecondsDiff(start: string | null, end: Date) {
   return Math.max(diff, 0);
 }
 
+/**
+ * Business logic:
+ *
+ * Morning:
+ * - AM out requires AM in
+ *
+ * Afternoon:
+ * - PM in is independent from morning
+ * - PM out requires PM in
+ */
 function validateWindow(
   eventType: EventType,
   nowMinutes: number,
   attendanceDay: any
 ): string | null {
   if (eventType === "am_in") {
-    if (nowMinutes < MORNING_IN_START || nowMinutes > MORNING_END) {
-      return "Morning time in is only allowed from 8:00 AM to 12:30 PM.";
-    }
     if (attendanceDay?.am_in_at) {
       return "Morning time in has already been recorded.";
+    }
+    if (nowMinutes < MORNING_START || nowMinutes > MORNING_END) {
+      return "Morning time in is only allowed from 6:00 AM to 12:29 PM.";
     }
     return null;
   }
 
   if (eventType === "am_out") {
-    if (nowMinutes < MORNING_IN_START || nowMinutes > MORNING_END) {
-      return "Morning time out is only allowed before 12:30 PM.";
-    }
     if (!attendanceDay?.am_in_at) {
       return "You must complete morning time in first.";
     }
     if (attendanceDay?.am_out_at) {
       return "Morning time out has already been recorded.";
     }
+    if (nowMinutes < MORNING_START || nowMinutes > MORNING_END) {
+      return "Morning time out is only allowed until 12:29 PM.";
+    }
     return null;
   }
 
   if (eventType === "pm_in") {
-    if (nowMinutes < AFTERNOON_START || nowMinutes > AFTERNOON_END) {
-      return "Afternoon time in is only allowed from 1:00 PM to 5:00 PM.";
-    }
-    if (!attendanceDay?.am_in_at || !attendanceDay?.am_out_at) {
-      return "You must complete morning time in and time out before afternoon time in.";
-    }
     if (attendanceDay?.pm_in_at) {
       return "Afternoon time in has already been recorded.";
+    }
+    if (nowMinutes < AFTERNOON_IN_START || nowMinutes > AFTERNOON_IN_END) {
+      return "Afternoon time in is only allowed from 12:50 PM to 5:00 PM.";
     }
     return null;
   }
 
   if (eventType === "pm_out") {
-    if (nowMinutes < AFTERNOON_START || nowMinutes > AFTERNOON_END) {
-      return "Afternoon time out is only allowed from 1:00 PM to 5:00 PM.";
-    }
     if (!attendanceDay?.pm_in_at) {
       return "You must complete afternoon time in first.";
     }
     if (attendanceDay?.pm_out_at) {
       return "Afternoon time out has already been recorded.";
+    }
+    if (nowMinutes < AFTERNOON_IN_START || nowMinutes > AFTERNOON_OUT_END) {
+      return "Afternoon time out is only allowed from 12:50 PM to 6:00 PM.";
     }
     return null;
   }
@@ -204,7 +226,10 @@ export async function recordAttendance(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, message: "Your session expired. Please log in again." };
+    return {
+      success: false,
+      message: "Your session expired. Please log in again.",
+    };
   }
 
   const eventTypeRaw = formData.get("event_type");
@@ -220,10 +245,12 @@ export async function recordAttendance(
   const latitude = toNumber(formData.get("latitude"));
   const longitude = toNumber(formData.get("longitude"));
   const accuracyMeters = toNumber(formData.get("accuracy_meters"));
+
   const activitySummary =
     typeof formData.get("activity_summary") === "string"
       ? formData.get("activity_summary")!.toString().trim()
       : "";
+
   const deviceInfoRaw =
     typeof formData.get("device_info") === "string"
       ? formData.get("device_info")!.toString()
@@ -281,11 +308,7 @@ export async function recordAttendance(
     ? assignment.offices[0]
     : assignment.offices;
 
-  if (
-    !office ||
-    office.latitude == null ||
-    office.longitude == null
-  ) {
+  if (!office || office.latitude == null || office.longitude == null) {
     return {
       success: false,
       message:
@@ -368,28 +391,45 @@ export async function recordAttendance(
     });
 
   if (uploadError) {
-    return { success: false, message: `Photo upload failed: ${uploadError.message}` };
+    return {
+      success: false,
+      message: `Photo upload failed: ${uploadError.message}`,
+    };
   }
 
-  const { data: photoData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+  const { data: photoData } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(filePath);
+
   const photoUrl = photoData.publicUrl;
 
-  const { error: eventInsertError } = await supabase.from("attendance_events").insert({
-    attendance_day_id: attendanceDay.id,
-    student_id: student.id,
-    assignment_id: assignment.id,
-    office_id: office.id,
-    attendance_date: attendanceDate,
-    event_type: eventType,
-    event_at: now.toISOString(),
-    latitude,
-    longitude,
-    accuracy_meters: accuracyMeters,
-    distance_meters: distanceMeters,
-    photo_url: photoUrl,
-    activity_summary: activitySummary,
-    device_info: deviceInfoRaw ? JSON.parse(deviceInfoRaw) : null,
-  });
+  const parsedDeviceInfo = (() => {
+    if (!deviceInfoRaw) return null;
+    try {
+      return JSON.parse(deviceInfoRaw);
+    } catch {
+      return null;
+    }
+  })();
+
+  const { error: eventInsertError } = await supabase
+    .from("attendance_events")
+    .insert({
+      attendance_day_id: attendanceDay.id,
+      student_id: student.id,
+      assignment_id: assignment.id,
+      office_id: office.id,
+      attendance_date: attendanceDate,
+      event_type: eventType,
+      event_at: now.toISOString(),
+      latitude,
+      longitude,
+      accuracy_meters: accuracyMeters,
+      distance_meters: distanceMeters,
+      photo_url: photoUrl,
+      activity_summary: activitySummary,
+      device_info: parsedDeviceInfo,
+    });
 
   if (eventInsertError) {
     return { success: false, message: eventInsertError.message };
