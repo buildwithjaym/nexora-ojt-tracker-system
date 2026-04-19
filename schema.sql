@@ -988,3 +988,160 @@ using (
       and t.id = public.assignments.teacher_id
   )
 );
+
+
+create or replace function public.current_student_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select s.id
+  from public.students s
+  where s.profile_id = auth.uid()
+  limit 1
+$$;
+
+drop policy if exists "students_can_read_own_assignments" on public.assignments;
+
+create policy "students_can_read_own_assignments"
+on public.assignments
+for select
+to authenticated
+using (
+  student_id = public.current_student_id()
+);
+
+drop policy if exists "students_can_read_own_assigned_offices" on public.offices;
+
+create policy "students_can_read_own_assigned_offices"
+on public.offices
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.assignments a
+    where a.office_id = offices.id
+      and a.student_id = public.current_student_id()
+  )
+);
+
+
+create or replace function public.current_student_teacher_ids()
+returns setof uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select distinct a.teacher_id
+  from public.assignments a
+  where a.student_id = public.current_student_id()
+    and a.status in ('pending', 'active')
+$$;
+
+alter table public.teachers enable row level security;
+
+grant select on public.teachers to authenticated;
+
+drop policy if exists "students_can_view_assigned_teacher" on public.teachers;
+drop policy if exists "students_can_read_own_teacher" on public.teachers;
+
+create policy "students_can_view_assigned_teacher"
+on public.teachers
+for select
+to authenticated
+using (
+  id in (
+    select public.current_student_teacher_ids()
+  )
+);
+
+
+<-----RLS FOR ATTENDANCE DAYS AND EVENTS------>
+alter table public.attendance_days enable row level security;
+
+drop policy if exists "students_can_view_their_own_attendance_days" on public.attendance_days;
+drop policy if exists "students_can_insert_their_own_attendance_days" on public.attendance_days;
+drop policy if exists "students_can_update_their_own_attendance_days" on public.attendance_days;
+
+create policy "students_can_view_their_own_attendance_days"
+on public.attendance_days
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    where s.id = public.attendance_days.student_id
+      and s.profile_id = auth.uid()
+  )
+);
+
+create policy "students_can_insert_their_own_attendance_days"
+on public.attendance_days
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.students s
+    where s.id = public.attendance_days.student_id
+      and s.profile_id = auth.uid()
+  )
+);
+
+create policy "students_can_update_their_own_attendance_days"
+on public.attendance_days
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    where s.id = public.attendance_days.student_id
+      and s.profile_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.students s
+    where s.id = public.attendance_days.student_id
+      and s.profile_id = auth.uid()
+  )
+);
+
+
+alter table public.attendance_events enable row level security;
+
+drop policy if exists "students_can_view_their_own_attendance_events" on public.attendance_events;
+drop policy if exists "students_can_insert_their_own_attendance_events" on public.attendance_events;
+
+create policy "students_can_view_their_own_attendance_events"
+on public.attendance_events
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    where s.id = public.attendance_events.student_id
+      and s.profile_id = auth.uid()
+  )
+);
+
+create policy "students_can_insert_their_own_attendance_events"
+on public.attendance_events
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.students s
+    where s.id = public.attendance_events.student_id
+      and s.profile_id = auth.uid()
+  )
+);
