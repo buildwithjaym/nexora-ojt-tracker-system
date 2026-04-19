@@ -12,10 +12,16 @@ function formatManilaNow() {
   }).format(new Date());
 }
 
-export function ManilaLiveClock() {
-  const [time, setTime] = useState(formatManilaNow());
+type ManilaLiveClockProps = {
+  initialTime: string;
+};
+
+export function ManilaLiveClock({ initialTime }: ManilaLiveClockProps) {
+  const [time, setTime] = useState(initialTime);
 
   useEffect(() => {
+    setTime(formatManilaNow());
+
     const interval = setInterval(() => {
       setTime(formatManilaNow());
     }, 1000);
