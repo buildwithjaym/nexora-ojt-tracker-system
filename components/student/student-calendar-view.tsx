@@ -32,6 +32,8 @@ type StudentCalendarViewProps = {
   attendanceLogs: AttendanceLog[];
 };
 
+const FULL_DAY_SECONDS = 8 * 60 * 60;
+
 function parseDateOnly(dateStr: string) {
   const [year, month, day] = dateStr.split("-").map(Number);
   return new Date(year, month - 1, day);
@@ -84,6 +86,22 @@ function getTodayLocalDate() {
   return new Date(year, month - 1, day);
 }
 
+function getDayLevel(seconds: number) {
+  if (seconds >= FULL_DAY_SECONDS) return "complete";
+  if (seconds > 0) return "partial";
+  return "empty";
+}
+
+function getStatusBadgeClasses(level: "complete" | "partial" | "empty") {
+  if (level === "complete") {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-400";
+  }
+  if (level === "partial") {
+    return "border-amber-500/20 bg-amber-500/10 text-amber-400";
+  }
+  return "border-border bg-background text-muted-foreground";
+}
+
 type DaySummaryModalProps = {
   selectedDate: Date;
   activeLog: AttendanceLog | null;
@@ -95,6 +113,9 @@ function DaySummaryModal({
   activeLog,
   onClose,
 }: DaySummaryModalProps) {
+  const totalSeconds = Number(activeLog?.total_work_seconds ?? 0);
+  const dayLevel = getDayLevel(totalSeconds);
+
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
       <button
@@ -104,10 +125,10 @@ function DaySummaryModal({
         aria-label="Close summary modal overlay"
       />
 
-      <div className="relative z-10 flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-border bg-background shadow-2xl animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-200">
+      <div className="relative z-10 flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-[1.75rem] border border-border bg-background shadow-2xl animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-200">
         <div className="relative border-b border-border px-5 py-4">
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-primary/5 blur-2xl" />
-          <div className="relative flex items-center justify-between">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-primary/5 blur-2xl" />
+          <div className="relative flex items-center justify-between gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Daily Attendance Summary</p>
               <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
@@ -129,10 +150,10 @@ function DaySummaryModal({
         <div className="overflow-y-auto px-5 py-5">
           {activeLog ? (
             <div className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-border bg-card p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Status
+                    Attendance Status
                   </p>
                   <p className="mt-2 text-sm font-medium capitalize">
                     {activeLog.status}
@@ -144,18 +165,25 @@ function DaySummaryModal({
                     Total Work Time
                   </p>
                   <p className="mt-2 text-sm font-medium">
-                    {formatWorkHours(Number(activeLog.total_work_seconds ?? 0))}
+                    {formatWorkHours(totalSeconds)}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-                  <div className="flex items-center gap-2 text-primary">
-                    <CheckCircle2 className="h-4 w-4" />
-                    <p className="text-xs uppercase tracking-wide">Swipe View</p>
-                  </div>
-                  <p className="mt-2 text-sm font-medium text-foreground">
-                    Swipe left and right to switch between morning and afternoon.
+                <div className="rounded-2xl border border-border bg-card p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Day Level
                   </p>
+                  <div
+                    className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-medium capitalize ${getStatusBadgeClasses(
+                      dayLevel
+                    )}`}
+                  >
+                    {dayLevel === "complete"
+                      ? "Completed day"
+                      : dayLevel === "partial"
+                      ? "Partial day"
+                      : "No work time"}
+                  </div>
                 </div>
               </div>
 
@@ -190,7 +218,7 @@ function DaySummaryModal({
                         <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           Activity Summary
                         </p>
-                        <p className="mt-2 text-sm text-foreground leading-6">
+                        <p className="mt-2 text-sm leading-6 text-foreground">
                           {activeLog.am_activity_summary?.trim() ||
                             "No morning activity summary recorded."}
                         </p>
@@ -227,7 +255,7 @@ function DaySummaryModal({
                         <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           Activity Summary
                         </p>
-                        <p className="mt-2 text-sm text-foreground leading-6">
+                        <p className="mt-2 text-sm leading-6 text-foreground">
                           {activeLog.pm_activity_summary?.trim() ||
                             "No afternoon activity summary recorded."}
                         </p>
@@ -279,51 +307,96 @@ export function StudentCalendarView({
     return logsByDate.get(formatDateKey(selectedDate)) ?? null;
   }, [selectedDate, logsByDate]);
 
-  const datesWithLogs = useMemo(
-    () => attendanceLogs.map((log) => parseDateOnly(log.attendance_date)),
+  const completeDates = useMemo(
+    () =>
+      attendanceLogs
+        .filter((log) => Number(log.total_work_seconds ?? 0) >= FULL_DAY_SECONDS)
+        .map((log) => parseDateOnly(log.attendance_date)),
+    [attendanceLogs]
+  );
+
+  const partialDates = useMemo(
+    () =>
+      attendanceLogs
+        .filter((log) => {
+          const seconds = Number(log.total_work_seconds ?? 0);
+          return seconds > 0 && seconds < FULL_DAY_SECONDS;
+        })
+        .map((log) => parseDateOnly(log.attendance_date)),
     [attendanceLogs]
   );
 
   const selectedLabel = selectedDate ? formatDateLong(selectedDate) : "No date selected";
+  const selectedSeconds = Number(activeLog?.total_work_seconds ?? 0);
+  const selectedLevel = getDayLevel(selectedSeconds);
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[1.75rem] border border-border bg-card p-5 shadow-sm sm:p-6">
-        <div className="pointer-events-none absolute -left-16 top-0 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute -right-16 bottom-0 h-48 w-48 rounded-full bg-accent/10 blur-3xl" />
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[1.5rem] border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute -left-16 top-0 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 bottom-0 h-40 w-40 rounded-full bg-accent/10 blur-3xl" />
 
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-3">
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="h-4 w-4 text-primary" />
               <span>{studentName}</span>
             </div>
 
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h2 className="text-2xl font-semibold tracking-tight">
               Attendance Calendar
             </h2>
 
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Tap a date to open a swipeable summary of your morning and afternoon activities.
+              Click a date to open a swipeable summary of your morning and afternoon activities.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-background px-4 py-3">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />
-              <p className="text-xs uppercase tracking-wide">Selected Date</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-background px-4 py-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Selected Date
+              </p>
+              <p className="mt-2 text-sm font-medium">{selectedLabel}</p>
             </div>
-            <p className="mt-2 text-sm font-medium">{selectedLabel}</p>
+
+            <div className="rounded-2xl border border-border bg-background px-4 py-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Work Time
+              </p>
+              <p className="mt-2 text-sm font-medium">
+                {activeLog ? formatWorkHours(selectedSeconds) : "—"}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-background px-4 py-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Day Level
+              </p>
+              <div
+                className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-medium capitalize ${getStatusBadgeClasses(
+                  activeLog ? selectedLevel : "empty"
+                )}`}
+              >
+                {activeLog
+                  ? selectedLevel === "complete"
+                    ? "Completed"
+                    : selectedLevel === "partial"
+                    ? "Partial"
+                    : "Empty"
+                  : "No record"}
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <div className="rounded-[1.75rem] border border-border bg-card p-4 shadow-sm sm:p-5">
+      <section className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <div className="rounded-[1.5rem] border border-border bg-card p-4 shadow-sm">
           <div className="mb-4">
             <p className="text-sm font-medium">Interactive Calendar</p>
             <p className="text-xs text-muted-foreground">
-              Today has a blue glow. Logged dates have markers.
+              Blue glow is today. Green means completed, amber means partial.
             </p>
           </div>
 
@@ -337,88 +410,96 @@ export function StudentCalendarView({
               }}
               className="w-full"
               modifiers={{
-                logged: datesWithLogs,
+                complete: completeDates,
+                partial: partialDates,
                 todayGlow: [today],
               }}
               modifiersClassNames={{
-                logged:
-                  "relative after:absolute after:bottom-1.5 after:left-1/2 after:h-1.5 after:w-1.5 after:-translate-x-1/2 after:rounded-full after:bg-primary",
+                complete:
+                  "relative after:absolute after:bottom-1.5 after:left-1/2 after:h-1.5 after:w-1.5 after:-translate-x-1/2 after:rounded-full after:bg-emerald-400",
+                partial:
+                  "relative after:absolute after:bottom-1.5 after:left-1/2 after:h-1.5 after:w-1.5 after:-translate-x-1/2 after:rounded-full after:bg-amber-400",
                 todayGlow:
-                  "bg-primary/10 text-primary ring-1 ring-primary/20 shadow-[0_0_24px_rgba(59,130,246,0.18)]",
+                  "bg-primary/10 text-primary ring-1 ring-primary/20 shadow-[0_0_20px_rgba(59,130,246,0.15)]",
               }}
             />
           </div>
+
+          <div className="mt-4 grid gap-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              Completed day (8 hours)
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+              Partial day
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+              Today
+            </div>
+          </div>
         </div>
 
-        <div className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm sm:p-6">
-          <div className="mb-5">
-            <p className="text-sm font-medium">Quick Preview</p>
-            <p className="text-xs text-muted-foreground">
-              The large empty area now shows a useful preview instead of staying blank.
-            </p>
+        <div className="rounded-[1.5rem] border border-border bg-card p-5 shadow-sm">
+          <div className="mb-5 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Quick Preview</p>
+              <p className="text-xs text-muted-foreground">
+                A preview section.
+              </p>
+            </div>
+
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Tap a date
+            </div>
           </div>
 
           {activeLog ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Status
-                </p>
-                <p className="mt-2 text-sm font-medium capitalize">
-                  {activeLog.status}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Work Time
-                </p>
-                <p className="mt-2 text-sm font-medium">
-                  {formatWorkHours(Number(activeLog.total_work_seconds ?? 0))}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-                <p className="text-xs uppercase tracking-wide text-primary">
-                  Details
-                </p>
-                <p className="mt-2 text-sm font-medium">
-                  Click the date again or choose another date to open the modal summary.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Morning
-                </p>
-                <p className="mt-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Sun className="h-4 w-4 text-primary" />
+                  <p className="text-xs uppercase tracking-wide">Morning Preview</p>
+                </div>
+                <p className="mt-3 text-sm">
                   {activeLog.am_activity_summary?.trim() || "No morning summary"}
                 </p>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {formatLogged(activeLog.am_in_at)} • {formatLogged(activeLog.am_out_at)}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Afternoon
-                </p>
-                <p className="mt-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Sunset className="h-4 w-4 text-primary" />
+                  <p className="text-xs uppercase tracking-wide">Afternoon Preview</p>
+                </div>
+                <p className="mt-3 text-sm">
                   {activeLog.pm_activity_summary?.trim() || "No afternoon summary"}
                 </p>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {formatLogged(activeLog.pm_in_at)} • {formatLogged(activeLog.pm_out_at)}
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Date
+              <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 lg:col-span-2">
+                <p className="text-xs uppercase tracking-wide text-primary">
+                  View Full Summary
                 </p>
-                <p className="mt-2 text-sm font-medium">{selectedLabel}</p>
+                <p className="mt-2 text-sm font-medium text-foreground">
+                  Click the date to open the swipeable modal with full day details.
+                </p>
               </div>
             </div>
           ) : (
-            <div className="flex h-full min-h-[260px] items-center justify-center rounded-2xl border border-dashed border-border bg-background p-8 text-center">
+            <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-border bg-background p-8 text-center">
               <div>
                 <Clock3 className="mx-auto h-5 w-5 text-muted-foreground" />
                 <p className="mt-3 text-sm font-medium">No attendance preview</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Select a date with or without logs to open the summary modal.
+                  Select any date to open the modal summary and review your day.
                 </p>
               </div>
             </div>
