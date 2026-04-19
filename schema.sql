@@ -650,3 +650,341 @@ using (
       and a.teacher_id = public.current_teacher_id()
   )
 );
+
+alter table offices
+add column google_place_id text null;
+
+drop policy if exists "Teachers can update themselves" on public.teachers;
+
+create policy "Teachers can update themselves"
+on public.teachers
+for update
+to authenticated
+using (profile_id = auth.uid())
+with check (profile_id = auth.uid());
+
+
+<------For students Part------->
+
+alter table public.attendance_days enable row level security;
+alter table public.attendance_events enable row level security;
+
+create table public.attendance_days (
+  id uuid primary key default gen_random_uuid(),
+
+  student_id uuid not null references public.students(id) on delete cascade,
+  assignment_id uuid not null references public.assignments(id) on delete cascade,
+  office_id uuid not null references public.offices(id) on delete restrict,
+
+  attendance_date date not null,
+  status text not null default 'open',
+
+  am_in_at timestamptz null,
+  am_out_at timestamptz null,
+  pm_in_at timestamptz null,
+  pm_out_at timestamptz null,
+
+  am_in_photo_url text null,
+  am_out_photo_url text null,
+  pm_in_photo_url text null,
+  pm_out_photo_url text null,
+
+  am_in_latitude double precision null,
+  am_in_longitude double precision null,
+  am_in_accuracy_meters double precision null,
+  am_in_distance_meters double precision null,
+
+  am_out_latitude double precision null,
+  am_out_longitude double precision null,
+  am_out_accuracy_meters double precision null,
+  am_out_distance_meters double precision null,
+
+  pm_in_latitude double precision null,
+  pm_in_longitude double precision null,
+  pm_in_accuracy_meters double precision null,
+  pm_in_distance_meters double precision null,
+
+  pm_out_latitude double precision null,
+  pm_out_longitude double precision null,
+  pm_out_accuracy_meters double precision null,
+  pm_out_distance_meters double precision null,
+
+  am_activity_summary text null,
+  pm_activity_summary text null,
+
+  am_work_seconds integer not null default 0,
+  pm_work_seconds integer not null default 0,
+  total_work_seconds integer generated always as (am_work_seconds + pm_work_seconds) stored,
+
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+
+  constraint attendance_days_status_check
+    check (status in ('open', 'completed', 'invalid')),
+
+  constraint attendance_days_unique_student_date
+    unique (student_id, attendance_date),
+
+  constraint attendance_days_am_order_check
+    check (
+      am_out_at is null
+      or am_in_at is not null
+    ),
+
+  constraint attendance_days_pm_order_check
+    check (
+      pm_out_at is null
+      or pm_in_at is not null
+    ),
+
+  constraint attendance_days_am_time_check
+    check (
+      am_in_at is null
+      or am_out_at is null
+      or am_out_at >= am_in_at
+    ),
+
+  constraint attendance_days_pm_time_check
+    check (
+      pm_in_at is null
+      or pm_out_at is null
+      or pm_out_at >= pm_in_at
+    ),
+
+  constraint attendance_days_am_work_seconds_check
+    check (am_work_seconds >= 0),
+
+  constraint attendance_days_pm_work_seconds_check
+    check (pm_work_seconds >= 0)
+);
+
+create table public.attendance_events (
+  id uuid primary key default gen_random_uuid(),
+
+  attendance_day_id uuid not null references public.attendance_days(id) on delete cascade,
+  student_id uuid not null references public.students(id) on delete cascade,
+  assignment_id uuid not null references public.assignments(id) on delete cascade,
+  office_id uuid not null references public.offices(id) on delete restrict,
+
+  attendance_date date not null,
+  event_type text not null,
+  event_at timestamptz not null default now(),
+
+  latitude double precision not null,
+  longitude double precision not null,
+  accuracy_meters double precision null,
+  distance_meters double precision not null,
+
+  photo_url text null,
+  activity_summary text null,
+
+  device_info jsonb null,
+  created_at timestamptz not null default now(),
+
+  constraint attendance_events_type_check
+    check (event_type in ('am_in', 'am_out', 'pm_in', 'pm_out')),
+
+  constraint attendance_events_distance_check
+    check (distance_meters >= 0)
+);
+
+create index idx_attendance_days_student_date
+on public.attendance_days(student_id, attendance_date desc);
+
+create index idx_attendance_days_assignment_date
+on public.attendance_days(assignment_id, attendance_date desc);
+
+create index idx_attendance_days_office_date
+on public.attendance_days(office_id, attendance_date desc);
+
+create index idx_attendance_days_status
+on public.attendance_days(status);
+
+create index idx_attendance_days_created_at
+on public.attendance_days(created_at desc);
+
+create index idx_attendance_events_day_id
+on public.attendance_events(attendance_day_id);
+
+create index idx_attendance_events_student_date
+on public.attendance_events(student_id, attendance_date desc);
+
+create index idx_attendance_events_assignment_date
+on public.attendance_events(assignment_id, attendance_date desc);
+
+create index idx_attendance_events_office_date
+on public.attendance_events(office_id, attendance_date desc);
+
+create index idx_attendance_events_type
+on public.attendance_events(event_type);
+
+create index idx_attendance_events_event_at
+on public.attendance_events(event_at desc);
+
+create trigger trg_attendance_days_updated_at
+before update on public.attendance_days
+for each row
+execute function set_updated_at();
+
+create policy "students_can_view_their_own_attendance_days"
+on public.attendance_days
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    join public.profiles p
+      on p.id = s.profile_id
+    where s.id = attendance_days.student_id
+      and p.id = auth.uid()
+      and p.role = 'student'
+      and p.is_active = true
+  )
+);
+
+
+create policy "students_can_view_their_own_attendance_events"
+on public.attendance_events
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    join public.profiles p
+      on p.id = s.profile_id
+    where s.id = attendance_events.student_id
+      and p.id = auth.uid()
+      and p.role = 'student'
+      and p.is_active = true
+  )
+);
+
+<--- RLS FOR STUDENTS--->
+
+alter table public.students enable row level security;
+alter table public.batches enable row level security;
+alter table public.assignments enable row level security;
+alter table public.offices enable row level security;
+alter table public.teachers enable row level security;
+
+create policy "Students can view their own student record"
+on public.students
+for select
+to authenticated
+using (profile_id = auth.uid());
+
+create policy "Students can view their own batch"
+on public.batches
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    where s.profile_id = auth.uid()
+      and s.batch_id = batches.id
+  )
+);
+
+create policy "Students can view their own assignments"
+on public.assignments
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    where s.profile_id = auth.uid()
+      and s.id = assignments.student_id
+  )
+);
+
+create policy "Students can view their own office"
+on public.offices
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.assignments a
+    join public.students s on s.id = a.student_id
+    where s.profile_id = auth.uid()
+      and a.office_id = offices.id
+  )
+);
+
+create policy "Students can view their assigned teacher"
+on public.teachers
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.assignments a
+    join public.students s on s.id = a.student_id
+    where s.profile_id = auth.uid()
+      and a.teacher_id = teachers.id
+  )
+);
+
+<----RECURSION ERROR FIX----->
+
+drop policy if exists "Students can view their own assignments" on public.assignments;
+drop policy if exists "Teachers can view their own assignments" on public.assignments;
+drop policy if exists "Teachers can manage their own assignments" on public.assignments;
+drop policy if exists "Teachers can view assigned students" on public.assignments;
+
+
+create policy "Students can view their own assignments"
+on public.assignments
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    where s.profile_id = auth.uid()
+      and s.id = public.assignments.student_id
+  )
+);
+
+create policy "Teachers can view their own assignments"
+on public.assignments
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.teachers t
+    where t.profile_id = auth.uid()
+      and t.id = public.assignments.teacher_id
+  )
+);
+
+
+<---- RECURSION PROBLEM TO FIX IT----->
+drop policy if exists "students_can_view_their_own_attendance_days" on public.attendance_days;
+drop policy if exists "students_can_view_their_own_attendance_events" on public.attendance_events;
+
+drop policy if exists "Students can view their own student record" on public.students;
+drop policy if exists "Students can view their own batch" on public.batches;
+drop policy if exists "Students can view their own assignments" on public.assignments;
+drop policy if exists "Students can view their own office" on public.offices;
+drop policy if exists "Students can view their assigned teacher" on public.teachers;
+
+drop policy if exists "Teachers can view their own assignments" on public.assignments;
+
+create policy "Teachers can view their own assignments"
+on public.assignments
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.teachers t
+    where t.profile_id = auth.uid()
+      and t.id = public.assignments.teacher_id
+  )
+);
