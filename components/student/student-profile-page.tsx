@@ -41,7 +41,7 @@ type StudentProfilePageProps = {
   };
 };
 
-async function compressImageToUnder2MB(
+async function cropAndCompressAvatar(
   file: File,
   targetBytes = 2 * 1024 * 1024
 ): Promise<File> {
@@ -57,19 +57,30 @@ async function compressImageToUnder2MB(
       image.src = objectUrl;
     });
 
-    const maxWidth = 1400;
-    const scale = Math.min(1, maxWidth / img.width);
-    const width = Math.round(img.width * scale);
-    const height = Math.round(img.height * scale);
+    const square = Math.min(img.width, img.height);
+    const cropX = Math.max(0, (img.width - square) / 2);
+    const cropY = Math.max(0, (img.height - square) / 2);
+
+    const outputSize = Math.min(square, 1200);
 
     const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = outputSize;
+    canvas.height = outputSize;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return file;
 
-    ctx.drawImage(img, 0, 0, width, height);
+    ctx.drawImage(
+      img,
+      cropX,
+      cropY,
+      square,
+      square,
+      0,
+      0,
+      outputSize,
+      outputSize
+    );
 
     let quality = 0.9;
     let blob = await new Promise<Blob | null>((resolve) =>
@@ -108,6 +119,7 @@ export function StudentProfilePage({
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(profile.avatarUrl);
+  const [imageFailed, setImageFailed] = useState(false);
 
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -117,9 +129,17 @@ export function StudentProfilePage({
 
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
+    setImageFailed(false);
 
     return () => URL.revokeObjectURL(url);
   }, [selectedFile]);
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(profile.avatarUrl);
+      setImageFailed(false);
+    }
+  }, [profile.avatarUrl, selectedFile]);
 
   const progress = useMemo(() => {
     if (!student.requiredHours) return 0;
@@ -133,17 +153,23 @@ export function StudentProfilePage({
   async function handleFileChange(file: File | null) {
     if (!file) return;
 
-    const compressed = await compressImageToUnder2MB(file);
-    setSelectedFile(compressed);
-
-    toast.success("Profile photo ready", {
-      description: `Compressed size: ${(compressed.size / 1024 / 1024).toFixed(2)} MB`,
-    });
+    try {
+      const processed = await cropAndCompressAvatar(file);
+      setSelectedFile(processed);
+      toast.success("Profile photo ready", {
+        description: `Auto-cropped and compressed to ${(processed.size / 1024 / 1024).toFixed(2)} MB`,
+      });
+    } catch {
+      toast.error("Unable to prepare image", {
+        description: "Please try another photo.",
+      });
+    }
   }
 
   function handleRemoveImage() {
     setSelectedFile(null);
     setPreviewUrl(profile.avatarUrl);
+    setImageFailed(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -175,6 +201,13 @@ export function StudentProfilePage({
           return;
         }
 
+        if (result.avatarUrl) {
+          setPreviewUrl(result.avatarUrl);
+          setImageFailed(false);
+          setSelectedFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+
         toast.success("Profile updated", {
           id: loadingId,
           description: result.message,
@@ -187,6 +220,8 @@ export function StudentProfilePage({
       }
     });
   }
+
+  const displayName = [firstName, lastName].filter(Boolean).join(" ");
 
   return (
     <div className="space-y-6">
@@ -207,7 +242,7 @@ export function StudentProfilePage({
 
             <p className="max-w-2xl text-sm text-muted-foreground">
               Update your basic personal information and upload a profile photo.
-              Images are compressed automatically to help keep uploads small.
+              Your image is auto-cropped and compressed by the system before upload.
             </p>
           </div>
 
@@ -220,26 +255,28 @@ export function StudentProfilePage({
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
+      <section className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <div className="rounded-[1.5rem] border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col items-center text-center">
             <div className="relative">
-              <div className="flex h-36 w-36 items-center justify-center overflow-hidden rounded-full border border-border bg-background">
-                {previewUrl ? (
+              <div className="pointer-events-none absolute inset-0 rounded-full bg-primary/15 blur-2xl" />
+              <div className="relative flex h-40 w-40 items-center justify-center overflow-hidden rounded-full border border-primary/20 bg-background shadow-[0_0_40px_rgba(59,130,246,0.12)]">
+                {previewUrl && !imageFailed ? (
                   <img
                     src={previewUrl}
                     alt="Student avatar preview"
                     className="h-full w-full object-cover"
+                    onError={() => setImageFailed(true)}
                   />
                 ) : (
-                  <UserCircle2 className="h-16 w-16 text-muted-foreground" />
+                  <UserCircle2 className="h-20 w-20 text-muted-foreground" />
                 )}
               </div>
 
               <button
                 type="button"
                 onClick={handlePickImage}
-                className="absolute bottom-1 right-1 inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:opacity-90"
+                className="absolute bottom-2 right-2 inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:scale-105 hover:opacity-90"
                 aria-label="Upload profile photo"
               >
                 <Camera className="h-4 w-4" />
@@ -254,9 +291,7 @@ export function StudentProfilePage({
               className="hidden"
             />
 
-            <h3 className="mt-4 text-lg font-semibold">
-              {firstName} {lastName}
-            </h3>
+            <h3 className="mt-5 text-xl font-semibold">{displayName}</h3>
             <p className="text-sm text-muted-foreground">{profile.email}</p>
 
             <div className="mt-5 w-full rounded-2xl border border-border bg-background p-4 text-left">
@@ -266,9 +301,9 @@ export function StudentProfilePage({
               <p className="mt-2 text-sm font-medium">
                 {student.completedHours}/{student.requiredHours} hours
               </p>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
+              <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-secondary">
                 <div
-                  className="h-full rounded-full bg-primary"
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -288,13 +323,14 @@ export function StudentProfilePage({
                 type="button"
                 onClick={handleRemoveImage}
                 className="inline-flex items-center justify-center rounded-2xl border border-border bg-background px-4 py-3 text-sm font-medium transition hover:bg-muted"
+                aria-label="Reset avatar preview"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <p className="mt-3 text-xs text-muted-foreground">
-              Profile photos are automatically compressed to around 2MB or less.
+              Avatar images are center-cropped into a square and compressed to around 2MB or less.
             </p>
           </div>
         </div>
@@ -412,7 +448,7 @@ export function StudentProfilePage({
               type="button"
               onClick={handleSubmit}
               disabled={isPending}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-[0_0_30px_rgba(59,130,246,0.18)] transition hover:opacity-90 disabled:opacity-60"
             >
               {isPending ? (
                 <>
