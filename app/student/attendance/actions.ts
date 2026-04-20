@@ -311,7 +311,7 @@ export async function recordAttendance(
   }
 
   const maxDistance = Number(office.allowed_radius_meters ?? 100);
-  const maxAcceptedAccuracy = Math.min(30, maxDistance);
+  const maxAcceptedAccuracy = Math.min(100, maxDistance);
 
   if (accuracyMeters > maxAcceptedAccuracy) {
     return {
