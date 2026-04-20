@@ -122,10 +122,10 @@ function wait(ms: number) {
 }
 
 function getAccuracyLabel(accuracy: number) {
-  if (accuracy <= 30) {
+  if (accuracy <= 50) {
     return { tone: "text-emerald-600", text: "Excellent GPS accuracy" };
   }
-  if (accuracy <= 50) {
+  if (accuracy <= 75) {
     return { tone: "text-primary", text: "Good GPS accuracy" };
   }
   if (accuracy <= 100) {
@@ -135,7 +135,7 @@ function getAccuracyLabel(accuracy: number) {
 }
 
 function getMaxAcceptedAccuracy(allowedRadiusMeters: number) {
-  return Math.min(30, allowedRadiusMeters);
+  return Math.min(50, allowedRadiusMeters);
 }
 
 async function compressImage(
