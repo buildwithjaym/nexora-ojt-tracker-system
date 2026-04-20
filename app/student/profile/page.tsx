@@ -2,6 +2,21 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { StudentProfilePage } from "@/components/student/student-profile-page";
 
+function normalizeSex(value: string | null | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+
+  if (normalized === "male") return "male";
+  if (normalized === "female") return "female";
+  if (
+    normalized === "prefer_not_to_say" ||
+    normalized === "prefer not to say"
+  ) {
+    return "prefer_not_to_say";
+  }
+
+  return "";
+}
+
 export default async function StudentProfileRoute() {
   const supabase = await createClient();
 
@@ -63,8 +78,8 @@ export default async function StudentProfileRoute() {
     <StudentProfilePage
       profile={{
         id: profile.id,
-        email: profile.email,
-        avatarUrl: profile.avatar_url,
+        email: profile.email ?? "",
+        avatarUrl: profile.avatar_url ?? null,
         firstName: profile.first_name ?? "",
         middleName: profile.middle_name ?? "",
         lastName: profile.last_name ?? "",
@@ -73,17 +88,17 @@ export default async function StudentProfileRoute() {
       student={{
         id: student.id,
         studentNumber: student.student_number,
-        firstName: student.first_name ?? "",
-        middleName: student.middle_name ?? "",
-        lastName: student.last_name ?? "",
-        suffix: student.suffix ?? "",
-        sex: student.sex ?? "",
+        firstName: student.first_name ?? profile.first_name ?? "",
+        middleName: student.middle_name ?? profile.middle_name ?? "",
+        lastName: student.last_name ?? profile.last_name ?? "",
+        suffix: student.suffix ?? profile.suffix ?? "",
+        sex: normalizeSex(student.sex),
         age: student.age ?? null,
-        email: student.email ?? "",
+        email: student.email ?? profile.email ?? "",
         phone: student.phone ?? "",
-        requiredHours: student.required_hours,
-        completedHours: student.completed_hours,
-        status: student.status,
+        requiredHours: Number(student.required_hours ?? 0),
+        completedHours: Number(student.completed_hours ?? 0),
+        status: student.status ?? "active",
       }}
     />
   );

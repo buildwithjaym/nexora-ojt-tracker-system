@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   Camera,
-  CheckCircle2,
   Loader2,
   Save,
   Sparkles,
@@ -120,6 +119,7 @@ export function StudentProfilePage({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(profile.avatarUrl);
   const [imageFailed, setImageFailed] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -145,6 +145,8 @@ export function StudentProfilePage({
     if (!student.requiredHours) return 0;
     return Math.min((student.completedHours / student.requiredHours) * 100, 100);
   }, [student.completedHours, student.requiredHours]);
+
+  const displayName = [firstName, lastName].filter(Boolean).join(" ");
 
   function handlePickImage() {
     fileInputRef.current?.click();
@@ -174,6 +176,7 @@ export function StudentProfilePage({
   }
 
   function handleSubmit() {
+    setFieldErrors({});
     const loadingId = toast.loading("Saving profile...");
 
     startTransition(async () => {
@@ -194,6 +197,7 @@ export function StudentProfilePage({
         const result = await updateStudentProfile(formData);
 
         if (!result.success) {
+          setFieldErrors(result.fieldErrors ?? {});
           toast.error("Unable to save profile", {
             id: loadingId,
             description: result.message,
@@ -221,7 +225,12 @@ export function StudentProfilePage({
     });
   }
 
-  const displayName = [firstName, lastName].filter(Boolean).join(" ");
+  const inputClasses = (field: string) =>
+    `w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none transition ${
+      fieldErrors[field]
+        ? "border-red-500 focus:border-red-500"
+        : "border-border focus:border-primary"
+    }`;
 
   return (
     <div className="space-y-6">
@@ -241,8 +250,8 @@ export function StudentProfilePage({
             </h2>
 
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Update your basic personal information and upload a profile photo.
-              Your image is auto-cropped and compressed by the system before upload.
+              Update your personal information and profile photo. Avatar images
+              are center-cropped and compressed automatically before upload.
             </p>
           </div>
 
@@ -291,7 +300,7 @@ export function StudentProfilePage({
               className="hidden"
             />
 
-            <h3 className="mt-5 text-xl font-semibold">{displayName}</h3>
+            <h3 className="mt-5 text-xl font-semibold">{displayName || "Student"}</h3>
             <p className="text-sm text-muted-foreground">{profile.email}</p>
 
             <div className="mt-5 w-full rounded-2xl border border-border bg-background p-4 text-left">
@@ -349,8 +358,11 @@ export function StudentProfilePage({
               <input
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+                className={inputClasses("first_name")}
               />
+              {fieldErrors.first_name ? (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.first_name}</p>
+              ) : null}
             </div>
 
             <div>
@@ -358,7 +370,7 @@ export function StudentProfilePage({
               <input
                 value={middleName}
                 onChange={(e) => setMiddleName(e.target.value)}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+                className={inputClasses("middle_name")}
               />
             </div>
 
@@ -367,8 +379,11 @@ export function StudentProfilePage({
               <input
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+                className={inputClasses("last_name")}
               />
+              {fieldErrors.last_name ? (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.last_name}</p>
+              ) : null}
             </div>
 
             <div>
@@ -376,7 +391,7 @@ export function StudentProfilePage({
               <input
                 value={suffix}
                 onChange={(e) => setSuffix(e.target.value)}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+                className={inputClasses("suffix")}
                 placeholder="Jr., Sr., III"
               />
             </div>
@@ -386,7 +401,7 @@ export function StudentProfilePage({
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+                className={inputClasses("phone")}
               />
             </div>
 
@@ -395,7 +410,7 @@ export function StudentProfilePage({
               <select
                 value={sex}
                 onChange={(e) => setSex(e.target.value)}
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+                className={inputClasses("sex")}
               >
                 <option value="">Select sex</option>
                 <option value="male">Male</option>
@@ -411,8 +426,11 @@ export function StudentProfilePage({
                 onChange={(e) => setAge(e.target.value)}
                 type="number"
                 min="0"
-                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
+                className={inputClasses("age")}
               />
+              {fieldErrors.age ? (
+                <p className="mt-1 text-xs text-red-500">{fieldErrors.age}</p>
+              ) : null}
             </div>
 
             <div>

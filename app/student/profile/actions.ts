@@ -4,8 +4,16 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 type UpdateStudentProfileResult =
-  | { success: true; message: string; avatarUrl?: string | null }
-  | { success: false; message: string };
+  | {
+      success: true;
+      message: string;
+      avatarUrl?: string | null;
+    }
+  | {
+      success: false;
+      message: string;
+      fieldErrors?: Record<string, string>;
+    };
 
 function buildFullName(
   firstName: string,
@@ -19,6 +27,21 @@ function buildFullName(
     .join(" ");
 }
 
+function normalizeSex(value: string) {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "male") return "male";
+  if (normalized === "female") return "female";
+  if (
+    normalized === "prefer_not_to_say" ||
+    normalized === "prefer not to say"
+  ) {
+    return "prefer_not_to_say";
+  }
+
+  return "";
+}
+
 export async function updateStudentProfile(
   formData: FormData
 ): Promise<UpdateStudentProfileResult> {
@@ -29,7 +52,10 @@ export async function updateStudentProfile(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { success: false, message: "Your session expired. Please log in again." };
+    return {
+      success: false,
+      message: "Your session expired. Please log in again.",
+    };
   }
 
   const firstName = String(formData.get("first_name") ?? "").trim();
@@ -37,12 +63,18 @@ export async function updateStudentProfile(
   const lastName = String(formData.get("last_name") ?? "").trim();
   const suffix = String(formData.get("suffix") ?? "").trim();
   const phone = String(formData.get("phone") ?? "").trim();
-  const sex = String(formData.get("sex") ?? "").trim();
+  const sex = normalizeSex(String(formData.get("sex") ?? ""));
   const ageRaw = String(formData.get("age") ?? "").trim();
   const avatar = formData.get("avatar");
 
-  if (!firstName || !lastName) {
-    return { success: false, message: "First name and last name are required." };
+  const fieldErrors: Record<string, string> = {};
+
+  if (!firstName) {
+    fieldErrors.first_name = "First name is required.";
+  }
+
+  if (!lastName) {
+    fieldErrors.last_name = "Last name is required.";
   }
 
   const age =
@@ -50,10 +82,20 @@ export async function updateStudentProfile(
       ? null
       : Number.isFinite(Number(ageRaw))
       ? Number(ageRaw)
-      : null;
+      : NaN;
 
-  if (age !== null && age < 0) {
-    return { success: false, message: "Age must be zero or greater." };
+  if (Number.isNaN(age)) {
+    fieldErrors.age = "Age must be a valid number.";
+  } else if (age !== null && age < 0) {
+    fieldErrors.age = "Age must be zero or greater.";
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return {
+      success: false,
+      message: "Please correct the highlighted fields.",
+      fieldErrors,
+    };
   }
 
   const { data: student, error: studentError } = await supabase
@@ -63,7 +105,10 @@ export async function updateStudentProfile(
     .single();
 
   if (studentError || !student) {
-    return { success: false, message: "Student record not found." };
+    return {
+      success: false,
+      message: "Student record not found.",
+    };
   }
 
   let avatarUrl: string | null | undefined = undefined;
@@ -111,7 +156,10 @@ export async function updateStudentProfile(
     .eq("id", user.id);
 
   if (profileUpdateError) {
-    return { success: false, message: profileUpdateError.message };
+    return {
+      success: false,
+      message: `Unable to update profile: ${profileUpdateError.message}`,
+    };
   }
 
   const { error: studentUpdateError } = await supabase
@@ -123,12 +171,15 @@ export async function updateStudentProfile(
       suffix: suffix || null,
       phone: phone || null,
       sex: sex || null,
-      age,
+      age: age === null ? null : Number(age),
     })
     .eq("id", student.id);
 
   if (studentUpdateError) {
-    return { success: false, message: studentUpdateError.message };
+    return {
+      success: false,
+      message: `Unable to update student details: ${studentUpdateError.message}`,
+    };
   }
 
   revalidatePath("/student/profile");
