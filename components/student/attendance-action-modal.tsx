@@ -135,7 +135,7 @@ function getAccuracyLabel(accuracy: number) {
 }
 
 function getMaxAcceptedAccuracy(allowedRadiusMeters: number) {
-  return Math.min(50, allowedRadiusMeters);
+  return Math.min(100, allowedRadiusMeters);
 }
 
 async function compressImage(
