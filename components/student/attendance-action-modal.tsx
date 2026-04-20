@@ -122,13 +122,13 @@ function wait(ms: number) {
 }
 
 function getAccuracyLabel(accuracy: number) {
-  if (accuracy <= 15) {
+  if (accuracy <= 30) {
     return { tone: "text-emerald-600", text: "Excellent GPS accuracy" };
   }
-  if (accuracy <= 30) {
+  if (accuracy <= 50) {
     return { tone: "text-primary", text: "Good GPS accuracy" };
   }
-  if (accuracy <= 50) {
+  if (accuracy <= 100) {
     return { tone: "text-amber-600", text: "Weak GPS accuracy" };
   }
   return { tone: "text-red-600", text: "Very weak GPS accuracy" };

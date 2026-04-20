@@ -310,7 +310,7 @@ export async function recordAttendance(
     };
   }
 
-  const maxDistance = Number(office.allowed_radius_meters ?? 50);
+  const maxDistance = Number(office.allowed_radius_meters ?? 100);
   const maxAcceptedAccuracy = Math.min(30, maxDistance);
 
   if (accuracyMeters > maxAcceptedAccuracy) {

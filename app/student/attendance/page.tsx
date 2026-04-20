@@ -227,7 +227,7 @@ export default async function StudentAttendancePage() {
         id: office.id,
         name: office.name ?? "Assigned Office",
         address: office.address ?? "No office address available",
-        allowedRadiusMeters: Number(office.allowed_radius_meters ?? 50),
+        allowedRadiusMeters: Number(office.allowed_radius_meters ?? 100),
         latitude: Number(office.latitude),
         longitude: Number(office.longitude),
       }}
