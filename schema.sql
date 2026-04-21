@@ -1252,3 +1252,85 @@ CREATE TRIGGER trg_update_hours_on_timeout
 AFTER INSERT ON public.attendance_days
 FOR EACH ROW
 EXECUTE FUNCTION update_student_completed_hours();
+
+
+
+<----Event Type error----->
+
+DROP TRIGGER IF EXISTS trg_update_hours_on_timeout ON public.attendance_days;
+DROP FUNCTION IF EXISTS update_student_completed_hours();
+
+CREATE OR REPLACE FUNCTION public.sync_student_completed_hours()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Recompute for INSERT or UPDATE
+  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+    UPDATE public.students
+    SET completed_hours = COALESCE((
+      SELECT SUM(total_work_seconds) / 3600.0
+      FROM public.attendance_days
+      WHERE student_id = NEW.student_id
+    ), 0),
+    updated_at = NOW()
+    WHERE id = NEW.student_id;
+
+    -- If student_id changed during update, also recompute old student
+    IF TG_OP = 'UPDATE' AND OLD.student_id IS DISTINCT FROM NEW.student_id THEN
+      UPDATE public.students
+      SET completed_hours = COALESCE((
+        SELECT SUM(total_work_seconds) / 3600.0
+        FROM public.attendance_days
+        WHERE student_id = OLD.student_id
+      ), 0),
+      updated_at = NOW()
+      WHERE id = OLD.student_id;
+    END IF;
+
+    RETURN NEW;
+  END IF;
+
+  <-- Recompute for DELETE--->
+  IF TG_OP = 'DELETE' THEN
+    UPDATE public.students
+    SET completed_hours = COALESCE((
+      SELECT SUM(total_work_seconds) / 3600.0
+      FROM public.attendance_days
+      WHERE student_id = OLD.student_id
+    ), 0),
+    updated_at = NOW()
+    WHERE id = OLD.student_id;
+
+    RETURN OLD;
+  END IF;
+
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_student_completed_hours
+AFTER INSERT OR UPDATE OR DELETE ON public.attendance_days
+FOR EACH ROW
+EXECUTE FUNCTION public.sync_student_completed_hours();
+
+
+
+'
+<--Fixes the updated time calculation for each students-->
+update students s
+set completed_hours = coalesce(t.total_seconds, 0) / 3600.0,
+    updated_at = now()
+from (
+  select student_id, sum(total_work_seconds) as total_seconds
+  from attendance_days
+  group by student_id
+) t
+where s.id = t.student_id;
+
+<---Reset the students who doesnt have any attendance yet (optional)--->
+update students
+set completed_hours = 0,
+    updated_at = now()
+where id not in (
+  select distinct student_id
+  from attendance_days
+);
