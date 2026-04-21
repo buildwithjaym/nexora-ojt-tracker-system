@@ -12,19 +12,22 @@ export default function TeacherLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen w-full overflow-x-hidden bg-background">
+    <div className="flex h-screen w-full overflow-hidden bg-background">
+      {/* Sidebar */}
       <TeacherSidebar
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
       />
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl sm:px-5 lg:px-6">
+      {/* Main shell */}
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background/90 px-4 backdrop-blur-xl sm:px-5 lg:px-6">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card transition hover:bg-muted lg:hidden"
             aria-label="Open sidebar"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-card transition hover:bg-muted lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -34,8 +37,9 @@ export default function TeacherLayout({
           </h1>
         </header>
 
-        <main className="flex-1 min-w-0 px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
-          <div className="mx-auto w-full max-w-7xl">
+        {/* Only this section scrolls */}
+        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
             {children}
           </div>
         </main>
