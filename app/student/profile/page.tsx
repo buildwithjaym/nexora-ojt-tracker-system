@@ -33,19 +33,24 @@ export default async function StudentProfileRoute() {
     .select(`
       id,
       email,
-      full_name,
       role,
       avatar_url,
       is_active,
       first_name,
       middle_name,
       last_name,
-      suffix
+      suffix,
+      full_name
     `)
     .eq("id", user.id)
     .single();
 
-  if (profileError || !profile || profile.role !== "student" || !profile.is_active) {
+  if (
+    profileError ||
+    !profile ||
+    profile.role !== "student" ||
+    !profile.is_active
+  ) {
     redirect("/login");
   }
 
@@ -74,24 +79,29 @@ export default async function StudentProfileRoute() {
     redirect("/student");
   }
 
+  const firstName = student.first_name ?? profile.first_name ?? "";
+  const middleName = student.middle_name ?? profile.middle_name ?? "";
+  const lastName = student.last_name ?? profile.last_name ?? "";
+  const suffix = student.suffix ?? profile.suffix ?? "";
+
   return (
     <StudentProfilePage
       profile={{
         id: profile.id,
-        email: profile.email ?? "",
+        email: profile.email ?? student.email ?? "",
         avatarUrl: profile.avatar_url ?? null,
-        firstName: profile.first_name ?? "",
-        middleName: profile.middle_name ?? "",
-        lastName: profile.last_name ?? "",
-        suffix: profile.suffix ?? "",
+        firstName,
+        middleName,
+        lastName,
+        suffix,
       }}
       student={{
         id: student.id,
         studentNumber: student.student_number,
-        firstName: student.first_name ?? profile.first_name ?? "",
-        middleName: student.middle_name ?? profile.middle_name ?? "",
-        lastName: student.last_name ?? profile.last_name ?? "",
-        suffix: student.suffix ?? profile.suffix ?? "",
+        firstName,
+        middleName,
+        lastName,
+        suffix,
         sex: normalizeSex(student.sex),
         age: student.age ?? null,
         email: student.email ?? profile.email ?? "",
