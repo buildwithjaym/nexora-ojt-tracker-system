@@ -112,6 +112,12 @@ function roundTo(value: number, decimals = 1) {
   return Math.round(value * factor) / factor;
 }
 
+function formatCompactNumber(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 function StatCard({
   title,
   value,
@@ -124,17 +130,21 @@ function StatCard({
   icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <div className="min-w-0 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
+
+          <p className="mt-3 break-words text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             {value}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">{description}</p>
+
+          <p className="mt-2 text-xs leading-5 text-muted-foreground sm:text-sm">
+            {description}
+          </p>
         </div>
 
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15 sm:h-11 sm:w-11">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -188,9 +198,7 @@ export default async function TeacherDashboardPage() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
-          } catch {
-            // Server Components cannot always set cookies directly.
-          }
+          } catch {}
         },
       },
     }
@@ -441,21 +449,21 @@ export default async function TeacherDashboardPage() {
     .slice(0, 5);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+    <div className="space-y-4 sm:space-y-6">
+      <section className="rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-primary">Teacher Dashboard</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              Welcome back, {teacherName}
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
+              Welcome back, <span className="break-words">{teacherName}</span>
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
               Monitor your assigned students, track internship progress, and
               review assignment activity in one place.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-background px-4 py-3">
+          <div className="w-full rounded-2xl border border-border bg-background px-4 py-3 sm:w-fit sm:min-w-[180px]">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
               Department
             </p>
@@ -466,7 +474,7 @@ export default async function TeacherDashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-4">
         <StatCard
           title="Total Assigned Students"
           value={String(totalAssignedStudents)}
@@ -481,7 +489,7 @@ export default async function TeacherDashboardPage() {
         />
         <StatCard
           title="Total Completed Hours"
-          value={String(totalCompletedHours)}
+          value={formatCompactNumber(roundTo(totalCompletedHours, 1))}
           description="Combined completed hours of your assigned students."
           icon={CheckCircle2}
         />
@@ -499,8 +507,8 @@ export default async function TeacherDashboardPage() {
         studentsByBatchData={studentsByBatchData}
       />
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div className="min-w-0 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
           <div className="mb-4">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
               Top Student Progress
@@ -522,16 +530,16 @@ export default async function TeacherDashboardPage() {
                   className="rounded-2xl border border-border bg-background px-4 py-4"
                 >
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-foreground">
                         {student.full_name}
                       </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 break-words text-xs text-muted-foreground">
                         {student.student_number} • {student.batch_name}
                       </p>
                     </div>
 
-                    <div className="text-left sm:text-right">
+                    <div className="shrink-0 text-left sm:text-right">
                       <p className="text-sm font-semibold text-foreground">
                         {roundTo(student.progress_percent, 1)}%
                       </p>
@@ -555,7 +563,7 @@ export default async function TeacherDashboardPage() {
           )}
         </div>
 
-        <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+        <div className="min-w-0 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
           <div className="mb-4">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
               Assignment Summary
@@ -594,10 +602,12 @@ export default async function TeacherDashboardPage() {
             ].map((item) => (
               <div
                 key={item.label}
-                className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3"
+                className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-background px-4 py-3"
               >
-                <span className="text-sm text-muted-foreground">{item.label}</span>
-                <span className="text-sm font-semibold text-foreground">
+                <span className="min-w-0 text-sm text-muted-foreground">
+                  {item.label}
+                </span>
+                <span className="shrink-0 text-sm font-semibold text-foreground">
                   {item.value}
                 </span>
               </div>
