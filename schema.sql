@@ -1204,3 +1204,51 @@ using (
   bucket_id = 'profile-avatars'
   and (storage.foldername(name))[1] = auth.uid()::text
 );
+
+<----Trying to solvee the not updated hours--->
+
+-- 1. Change the data type to allow for partial hours (e.g., 1.5 hours)
+ALTER TABLE public.students 
+ALTER COLUMN completed_hours TYPE float8;
+
+-- 2. Create the function that calculates and updates hours
+CREATE OR REPLACE FUNCTION update_student_completed_hours()
+RETURNS TRIGGER AS $$
+DECLARE
+    time_in_timestamp TIMESTAMPTZ;
+    duration_hours FLOAT8;
+BEGIN
+    -- Only run logic if the event is a "Time Out"
+    IF NEW.event_type IN ('am_out', 'pm_out') THEN
+        
+        -- Find the corresponding "Time In" for this student on the same day
+        SELECT created_at INTO time_in_timestamp
+        FROM public.attendance_days
+        WHERE student_id = NEW.student_id
+          AND event_type = REPLACE(NEW.event_type, '_out', '_in')
+          AND created_at::date = NEW.created_at::date
+        ORDER BY created_at DESC
+        LIMIT 1;
+
+        -- If we found a matching "In", calculate the difference
+        IF time_in_timestamp IS NOT NULL THEN
+            -- Calculate hours: (Seconds / 3600)
+            duration_hours := EXTRACT(EPOCH FROM (NEW.created_at - time_in_timestamp)) / 3600;
+
+            -- Update the students table
+            UPDATE public.students
+            SET completed_hours = completed_hours + duration_hours,
+                updated_at = NOW()
+            WHERE id = NEW.student_id;
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 3. Create the trigger on the attendance_days table
+CREATE TRIGGER trg_update_hours_on_timeout
+AFTER INSERT ON public.attendance_days
+FOR EACH ROW
+EXECUTE FUNCTION update_student_completed_hours();
