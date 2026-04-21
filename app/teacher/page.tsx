@@ -112,7 +112,7 @@ function roundTo(value: number, decimals = 1) {
   return Math.round(value * factor) / factor;
 }
 
-function formatCompactNumber(value: number) {
+function formatStatNumber(value: number) {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 1,
   }).format(value);
@@ -198,7 +198,9 @@ export default async function TeacherDashboardPage() {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
-          } catch {}
+          } catch {
+            // Server Components cannot always set cookies directly.
+          }
         },
       },
     }
@@ -451,7 +453,7 @@ export default async function TeacherDashboardPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <section className="rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-primary">Teacher Dashboard</p>
             <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
@@ -463,11 +465,11 @@ export default async function TeacherDashboardPage() {
             </p>
           </div>
 
-          <div className="w-full rounded-2xl border border-border bg-background px-4 py-3 sm:w-fit sm:min-w-[180px]">
+          <div className="w-full rounded-2xl border border-border bg-background px-4 py-3 sm:w-fit sm:min-w-[180px] xl:self-start">
             <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
               Department
             </p>
-            <p className="mt-1 text-sm font-medium text-foreground">
+            <p className="mt-1 break-words text-sm font-medium text-foreground">
               {teacher.department?.trim() || "Not set"}
             </p>
           </div>
@@ -489,7 +491,7 @@ export default async function TeacherDashboardPage() {
         />
         <StatCard
           title="Total Completed Hours"
-          value={formatCompactNumber(roundTo(totalCompletedHours, 1))}
+          value={formatStatNumber(roundTo(totalCompletedHours, 1))}
           description="Combined completed hours of your assigned students."
           icon={CheckCircle2}
         />
@@ -507,7 +509,7 @@ export default async function TeacherDashboardPage() {
         studentsByBatchData={studentsByBatchData}
       />
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="min-w-0 rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6">
           <div className="mb-4">
             <h2 className="text-lg font-semibold tracking-tight text-foreground">
