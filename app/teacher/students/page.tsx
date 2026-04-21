@@ -88,6 +88,13 @@ function roundTo(value: number, decimals = 1) {
   return Math.round(value * factor) / factor;
 }
 
+function formatHours(value: number, decimals = 2) {
+  return new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  }).format(Number(value || 0));
+}
+
 function getStatusClass(status: StudentStatus) {
   switch (status) {
     case "active":
@@ -174,7 +181,8 @@ function TopStudentCard({
         <div className="mb-2 flex flex-col gap-1 text-xs text-muted-foreground min-[390px]:flex-row min-[390px]:items-center min-[390px]:justify-between sm:text-sm">
           <span>Completed Hours</span>
           <span className="shrink-0">
-            {student.completed_hours} / {student.required_hours}
+            {formatHours(student.completed_hours)} /{" "}
+            {formatHours(student.required_hours, 0)}
           </span>
         </div>
 
@@ -189,7 +197,7 @@ function TopStudentCard({
           <span className="text-muted-foreground">
             Remaining:{" "}
             <span className="font-semibold text-foreground">
-              {student.remaining_hours} hrs
+              {formatHours(student.remaining_hours)} hrs
             </span>
           </span>
 
@@ -264,7 +272,7 @@ function StudentCard({ student }: { student: StudentRecord }) {
             Remaining Hours
           </p>
           <p className="mt-1 text-sm font-medium text-foreground">
-            {student.remaining_hours}
+            {formatHours(student.remaining_hours)}
           </p>
         </div>
       </div>
@@ -398,8 +406,8 @@ export default async function TeacherStudentsPage({
     if (!studentRaw) continue;
 
     const progressPercent = getProgress(
-      studentRaw.completed_hours,
-      studentRaw.required_hours
+      Number(studentRaw.completed_hours ?? 0),
+      Number(studentRaw.required_hours ?? 0)
     );
 
     studentMap.set(studentRaw.id, {
@@ -417,11 +425,12 @@ export default async function TeacherStudentsPage({
       batch_name: batchRaw?.name ?? "Unassigned Batch",
       batch_code: batchRaw?.code ?? "N/A",
       office_name: officeRaw?.name ?? "Unknown Office",
-      completed_hours: studentRaw.completed_hours,
-      required_hours: studentRaw.required_hours,
+      completed_hours: Number(studentRaw.completed_hours ?? 0),
+      required_hours: Number(studentRaw.required_hours ?? 0),
       remaining_hours: Math.max(
         0,
-        studentRaw.required_hours - studentRaw.completed_hours
+        Number(studentRaw.required_hours ?? 0) -
+          Number(studentRaw.completed_hours ?? 0)
       ),
       progress_percent: progressPercent,
       status: studentRaw.status,
@@ -431,6 +440,10 @@ export default async function TeacherStudentsPage({
   const students = Array.from(studentMap.values()).sort((a, b) => {
     if (b.progress_percent !== a.progress_percent) {
       return b.progress_percent - a.progress_percent;
+    }
+
+    if (b.completed_hours !== a.completed_hours) {
+      return b.completed_hours - a.completed_hours;
     }
 
     return a.student_name.localeCompare(b.student_name);
@@ -506,11 +519,8 @@ export default async function TeacherStudentsPage({
           </div>
 
           <div className="text-sm text-muted-foreground lg:text-right">
-            Showing{" "}
-            <span className="font-medium text-foreground">{startRow}</span>
-            {" "}to{" "}
-            <span className="font-medium text-foreground">{endRow}</span>
-            {" "}of{" "}
+            Showing <span className="font-medium text-foreground">{startRow}</span>{" "}
+            to <span className="font-medium text-foreground">{endRow}</span> of{" "}
             <span className="font-medium text-foreground">{students.length}</span>
           </div>
         </div>
@@ -521,7 +531,7 @@ export default async function TeacherStudentsPage({
           </div>
         ) : (
           <>
-            <div className="hidden lg:block overflow-x-auto">
+            <div className="hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[1000px] text-sm xl:min-w-[1080px]">
                 <thead className="bg-background/60">
                   <tr className="border-b border-border text-left">
@@ -606,7 +616,7 @@ export default async function TeacherStudentsPage({
                       </td>
 
                       <td className="px-4 py-3.5 text-foreground xl:px-5">
-                        {student.remaining_hours}
+                        {formatHours(student.remaining_hours)}
                       </td>
 
                       <td className="px-4 py-3.5 xl:px-5">
@@ -657,10 +667,8 @@ export default async function TeacherStudentsPage({
 
             <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:px-5 sm:flex-row sm:items-center sm:justify-between lg:px-6">
               <div className="text-sm text-muted-foreground">
-                Page{" "}
-                <span className="font-medium text-foreground">{safePage}</span>
-                {" "}of{" "}
-                <span className="font-medium text-foreground">{totalPages}</span>
+                Page <span className="font-medium text-foreground">{safePage}</span>{" "}
+                of <span className="font-medium text-foreground">{totalPages}</span>
               </div>
 
               <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
