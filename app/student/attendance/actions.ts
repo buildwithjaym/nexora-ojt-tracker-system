@@ -480,7 +480,7 @@ export async function recordAttendance(
     0
   );
 
-  const computedHours = Math.floor(totalSeconds / 3600);
+  const computedHours = Number((totalSeconds / 3600).toFixed(4));
 
   await supabase
     .from("students")
