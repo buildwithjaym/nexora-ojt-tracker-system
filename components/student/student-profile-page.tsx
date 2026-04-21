@@ -59,7 +59,6 @@ async function cropAndCompressAvatar(
     const square = Math.min(img.width, img.height);
     const cropX = Math.max(0, (img.width - square) / 2);
     const cropY = Math.max(0, (img.height - square) / 2);
-
     const outputSize = Math.min(square, 1200);
 
     const canvas = document.createElement("canvas");
@@ -104,6 +103,13 @@ async function cropAndCompressAvatar(
   }
 }
 
+function formatHours(value: number, maximumFractionDigits = 2) {
+  return new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  }).format(Number(value || 0));
+}
+
 export function StudentProfilePage({
   profile,
   student,
@@ -146,7 +152,31 @@ export function StudentProfilePage({
     return Math.min((student.completedHours / student.requiredHours) * 100, 100);
   }, [student.completedHours, student.requiredHours]);
 
-  const displayName = [firstName, lastName].filter(Boolean).join(" ");
+  const completedHoursLabel = useMemo(
+    () => formatHours(student.completedHours, 2),
+    [student.completedHours]
+  );
+
+  const requiredHoursLabel = useMemo(
+    () => formatHours(student.requiredHours, 0),
+    [student.requiredHours]
+  );
+
+  const remainingHoursLabel = useMemo(
+    () => formatHours(Math.max(student.requiredHours - student.completedHours, 0), 2),
+    [student.completedHours, student.requiredHours]
+  );
+
+  const displayName = [firstName, middleName, lastName, suffix]
+    .filter(Boolean)
+    .join(" ");
+
+  const inputClasses = (field: string) =>
+    `w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none transition ${
+      fieldErrors[field]
+        ? "border-red-500 focus:border-red-500"
+        : "border-border focus:border-primary"
+    }`;
 
   function handlePickImage() {
     fileInputRef.current?.click();
@@ -159,7 +189,11 @@ export function StudentProfilePage({
       const processed = await cropAndCompressAvatar(file);
       setSelectedFile(processed);
       toast.success("Profile photo ready", {
-        description: `Auto-cropped and compressed to ${(processed.size / 1024 / 1024).toFixed(2)} MB`,
+        description: `Auto-cropped and compressed to ${(
+          processed.size /
+          1024 /
+          1024
+        ).toFixed(2)} MB`,
       });
     } catch {
       toast.error("Unable to prepare image", {
@@ -225,13 +259,6 @@ export function StudentProfilePage({
     });
   }
 
-  const inputClasses = (field: string) =>
-    `w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none transition ${
-      fieldErrors[field]
-        ? "border-red-500 focus:border-red-500"
-        : "border-border focus:border-primary"
-    }`;
-
   return (
     <div className="space-y-6">
       <section className="relative overflow-hidden rounded-[1.75rem] border border-border bg-card p-5 shadow-sm sm:p-6">
@@ -250,8 +277,8 @@ export function StudentProfilePage({
             </h2>
 
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Update your personal information and profile photo. Avatar images
-              are center-cropped and compressed automatically before upload.
+              Update your personal information and official profile photo. Avatar
+              images are center-cropped and compressed automatically before upload.
             </p>
           </div>
 
@@ -308,7 +335,7 @@ export function StudentProfilePage({
                 OJT Progress
               </p>
               <p className="mt-2 text-sm font-medium">
-                {student.completedHours}/{student.requiredHours} hours
+                {completedHoursLabel}/{requiredHoursLabel} hours
               </p>
               <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-secondary">
                 <div
@@ -316,6 +343,9 @@ export function StudentProfilePage({
                   style={{ width: `${progress}%` }}
                 />
               </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Remaining hours: {remainingHoursLabel}
+              </p>
             </div>
 
             <div className="mt-4 flex w-full gap-3">
@@ -339,7 +369,8 @@ export function StudentProfilePage({
             </div>
 
             <p className="mt-3 text-xs text-muted-foreground">
-              Avatar images are center-cropped into a square and compressed to around 2MB or less.
+              Avatar images are center-cropped into a square and compressed to
+              around 2MB or less.
             </p>
           </div>
         </div>
