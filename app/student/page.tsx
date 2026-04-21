@@ -3,18 +3,32 @@ import {
   AlertTriangle,
   Award,
   BriefcaseBusiness,
-  CalendarDays,
   CheckCircle2,
   Clock3,
   FileText,
   MapPin,
   ShieldCheck,
-  UserCircle2,
   Sparkles,
+  UserCircle2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ManilaLiveClock } from "@/components/student/manila-live-clock";
 import { StudentWelcomeToast } from "@/components/student/student-welcome-toast";
+
+type AttendanceDayLike = {
+  id: string;
+  attendance_date: string;
+  status: string | null;
+  am_in_at: string | null;
+  am_out_at: string | null;
+  pm_in_at: string | null;
+  pm_out_at: string | null;
+  am_activity_summary?: string | null;
+  pm_activity_summary?: string | null;
+  am_in_distance_meters?: number | null;
+  pm_in_distance_meters?: number | null;
+  total_work_seconds?: number | null;
+};
 
 function getManilaDateInfo(date = new Date()) {
   const attendanceDate = new Intl.DateTimeFormat("en-CA", {
@@ -62,7 +76,34 @@ function getProgress(completed: number, required: number) {
   return Math.min((completed / required) * 100, 100);
 }
 
-function getNextAction(todayAttendance: any) {
+function formatHours(value: number, maximumFractionDigits = 2) {
+  return new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  }).format(Number(value || 0));
+}
+
+function formatRemainingHours(value: number) {
+  const safe = Math.max(Number(value || 0), 0);
+
+  return new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: safe > 0 && safe < 1 ? 2 : 0,
+    maximumFractionDigits: 2,
+  }).format(safe);
+}
+
+function formatWorkDuration(seconds: number) {
+  const safeSeconds = Math.max(Number(seconds || 0), 0);
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const secs = safeSeconds % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${secs}s`;
+  return `${secs}s`;
+}
+
+function getNextAction(todayAttendance: AttendanceDayLike | null) {
   if (!todayAttendance) return "Morning Time In or Afternoon Time In";
   if (!todayAttendance.am_in_at) return "Morning Time In available";
   if (todayAttendance.am_in_at && !todayAttendance.am_out_at) {
@@ -75,7 +116,7 @@ function getNextAction(todayAttendance: any) {
   return "Attendance completed for today";
 }
 
-function getTodayStatus(todayAttendance: any) {
+function getTodayStatus(todayAttendance: AttendanceDayLike | null) {
   if (!todayAttendance) return "No attendance yet";
   if (todayAttendance.am_in_at && !todayAttendance.am_out_at) {
     return "Morning session active";
@@ -98,12 +139,6 @@ function getBadges(progress: number) {
   ];
 }
 
-function formatWorkHours(seconds: number) {
-  const totalHours = Math.floor((seconds || 0) / 3600);
-  const totalMinutes = Math.floor(((seconds || 0) % 3600) / 60);
-  return `${totalHours}h ${totalMinutes}m`;
-}
-
 export default async function StudentDashboardPage() {
   const supabase = await createClient();
 
@@ -118,13 +153,13 @@ export default async function StudentDashboardPage() {
   const now = new Date();
   const { attendanceDate, readableDate, readableTime } = getManilaDateInfo(now);
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id, full_name, first_name, last_name, role, is_active")
+    .select("id, full_name, first_name, last_name")
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "student" || !profile.is_active) {
+  if (profileError || !profile) {
     redirect("/login");
   }
 
@@ -160,8 +195,9 @@ export default async function StudentDashboardPage() {
               Student account setup incomplete
             </h2>
             <p className="mt-3 text-sm leading-7 text-muted-foreground sm:text-base">
-              Your login was successful, but your student record is not accessible yet.
-              Please make sure the student table RLS allows students to read their own record.
+              Your login was successful, but your student record is not
+              accessible yet. Please make sure the student table RLS allows
+              students to read their own record.
             </p>
           </div>
         </section>
@@ -212,7 +248,7 @@ export default async function StudentDashboardPage() {
     `)
     .eq("student_id", student.id)
     .eq("attendance_date", attendanceDate)
-    .maybeSingle();
+    .maybeSingle<AttendanceDayLike>();
 
   const { data: recentLogs } = await supabase
     .from("attendance_days")
@@ -235,6 +271,10 @@ export default async function StudentDashboardPage() {
   const progress = getProgress(completedHours, requiredHours);
   const remainingHours = Math.max(requiredHours - completedHours, 0);
 
+  const completedHoursLabel = formatHours(completedHours, 2);
+  const requiredHoursLabel = formatHours(requiredHours, 0);
+  const remainingHoursLabel = formatRemainingHours(remainingHours);
+
   const firstName =
     student.first_name ||
     profile.first_name ||
@@ -250,18 +290,20 @@ export default async function StudentDashboardPage() {
     : assignment?.teachers;
 
   const badges = getBadges(progress);
-  const nextAction = getNextAction(todayAttendance);
-  const todayStatus = getTodayStatus(todayAttendance);
+  const nextAction = getNextAction(todayAttendance ?? null);
+  const todayStatus = getTodayStatus(todayAttendance ?? null);
 
   const reminders = [
     !assignment ? "You do not have an active assignment yet." : null,
     remainingHours > 0
-      ? `You still need ${remainingHours} hour${remainingHours === 1 ? "" : "s"} to complete your OJT.`
+      ? `You still need ${remainingHoursLabel} hour${
+          remainingHours === 1 ? "" : "s"
+        } to complete your OJT.`
       : "You have completed your required OJT hours.",
-    todayAttendance && !todayAttendance.am_out_at && todayAttendance.am_in_at
+    todayAttendance?.am_in_at && !todayAttendance?.am_out_at
       ? "Do not forget to complete your morning time out."
       : null,
-    todayAttendance && todayAttendance.pm_in_at && !todayAttendance.pm_out_at
+    todayAttendance?.pm_in_at && !todayAttendance?.pm_out_at
       ? "Do not forget to complete your afternoon time out."
       : null,
   ].filter(Boolean) as string[];
@@ -307,7 +349,7 @@ export default async function StudentDashboardPage() {
                   {progress.toFixed(1)}%
                 </span>
                 <span className="pb-1 text-sm text-muted-foreground">
-                  {completedHours}/{requiredHours} hours
+                  {completedHoursLabel}/{requiredHoursLabel} hours
                 </span>
               </div>
 
@@ -319,7 +361,7 @@ export default async function StudentDashboardPage() {
               </div>
 
               <p className="text-xs text-muted-foreground">
-                Remaining hours: {remainingHours}
+                Remaining hours: {remainingHoursLabel}
               </p>
             </div>
           </div>
@@ -361,17 +403,23 @@ export default async function StudentDashboardPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Status</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Status
+                </p>
                 <p className="mt-2 text-sm font-semibold">{todayStatus}</p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Next Action</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Next Action
+                </p>
                 <p className="mt-2 text-sm font-semibold">{nextAction}</p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Morning</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Morning
+                </p>
                 <div className="mt-2 space-y-1 text-sm">
                   <p>In: {todayAttendance?.am_in_at ? "Recorded" : "-"}</p>
                   <p>Out: {todayAttendance?.am_out_at ? "Recorded" : "-"}</p>
@@ -379,7 +427,9 @@ export default async function StudentDashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Afternoon</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Afternoon
+                </p>
                 <div className="mt-2 space-y-1 text-sm">
                   <p>In: {todayAttendance?.pm_in_at ? "Recorded" : "-"}</p>
                   <p>Out: {todayAttendance?.pm_out_at ? "Recorded" : "-"}</p>
@@ -406,16 +456,24 @@ export default async function StudentDashboardPage() {
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-sm font-medium">{log.attendance_date}</p>
-                        <p className="text-xs capitalize text-muted-foreground">{log.status}</p>
+                        <p className="text-xs capitalize text-muted-foreground">
+                          {log.status}
+                        </p>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {formatWorkHours(log.total_work_seconds ?? 0)}
+                        {formatWorkDuration(log.total_work_seconds ?? 0)}
                       </p>
                     </div>
 
                     <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                      <p>AM: {log.am_in_at ? "In" : "-"} / {log.am_out_at ? "Out" : "-"}</p>
-                      <p>PM: {log.pm_in_at ? "In" : "-"} / {log.pm_out_at ? "Out" : "-"}</p>
+                      <p>
+                        AM: {log.am_in_at ? "In" : "-"} /{" "}
+                        {log.am_out_at ? "Out" : "-"}
+                      </p>
+                      <p>
+                        PM: {log.pm_in_at ? "In" : "-"} /{" "}
+                        {log.pm_out_at ? "Out" : "-"}
+                      </p>
                     </div>
                   </div>
                 ))
@@ -423,7 +481,8 @@ export default async function StudentDashboardPage() {
                 <div className="rounded-2xl border border-dashed border-border bg-background p-6 text-center">
                   <p className="text-sm font-medium">No DTR records yet</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Your recent attendance logs will appear here once you start logging attendance.
+                    Your recent attendance logs will appear here once you start
+                    logging attendance.
                   </p>
                 </div>
               )}
@@ -497,7 +556,9 @@ export default async function StudentDashboardPage() {
               <div className="rounded-2xl border border-border bg-background p-4">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <FileText className="h-4 w-4" />
-                  <p className="text-xs uppercase tracking-wide">Assignment Status</p>
+                  <p className="text-xs uppercase tracking-wide">
+                    Assignment Status
+                  </p>
                 </div>
                 <p className="mt-2 text-sm font-medium capitalize">
                   {assignment?.status ?? "No active assignment"}
@@ -548,9 +609,12 @@ export default async function StudentDashboardPage() {
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                   <div>
-                    <p className="text-sm font-medium">Location-based attendance</p>
+                    <p className="text-sm font-medium">
+                      Location-based attendance
+                    </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      You must be within the allowed office radius when logging time in and time out.
+                      You must be within the allowed office radius when logging
+                      time in and time out.
                     </p>
                   </div>
                 </div>
@@ -562,7 +626,8 @@ export default async function StudentDashboardPage() {
                   <div>
                     <p className="text-sm font-medium">Photo proof required</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Your attendance logs may require a photo and activity summary for verification.
+                      Your attendance logs may require a photo and activity
+                      summary for verification.
                     </p>
                   </div>
                 </div>
