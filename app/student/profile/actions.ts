@@ -115,12 +115,16 @@ export async function updateStudentProfile(
 
   if (avatar instanceof File && avatar.size > 0) {
     const bucket = "profile-avatars";
-    const ext = avatar.name.split(".").pop() || "jpg";
-    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+    const ext = (avatar.name.split(".").pop() || "jpg").toLowerCase();
+    const safeExt = ext === "png" || ext === "webp" || ext === "jpg" || ext === "jpeg"
+      ? ext
+      : "jpg";
+
+    const storagePath = `${user.id}/official-avatar.${safeExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(path, avatar, {
+      .upload(storagePath, avatar, {
         contentType: avatar.type || "image/jpeg",
         upsert: true,
       });
@@ -132,8 +136,11 @@ export async function updateStudentProfile(
       };
     }
 
-    const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(path);
-    avatarUrl = publicUrlData.publicUrl;
+    const { data: publicUrlData } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(storagePath);
+
+    avatarUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
   }
 
   const fullName = buildFullName(firstName, middleName, lastName, suffix);
@@ -182,8 +189,8 @@ export async function updateStudentProfile(
     };
   }
 
-  revalidatePath("/student/profile");
   revalidatePath("/student");
+  revalidatePath("/student/profile");
 
   return {
     success: true,
