@@ -17,6 +17,12 @@ function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
 }
 
+function monthName(month: number) {
+  return new Date(2000, month - 1, 1).toLocaleString("en-US", {
+    month: "long",
+  });
+}
+
 function formatTime(value: string | null) {
   if (!value) return "";
 
@@ -31,10 +37,8 @@ function formatTime(value: string | null) {
 function getHoursMinutes(totalSeconds: number) {
   const hours = Math.floor((totalSeconds || 0) / 3600);
   const minutes = Math.floor(((totalSeconds || 0) % 3600) / 60);
-  return {
-    hours: String(hours),
-    minutes: String(minutes),
-  };
+
+  return { hours, minutes };
 }
 
 export async function GET(req: NextRequest) {
@@ -110,107 +114,265 @@ export async function GET(req: NextRequest) {
   }
 
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([612, 936]);
+  const page = pdfDoc.addPage([612, 936]); // 8.5 x 13 inches
+
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const italic = await pdfDoc.embedFont(StandardFonts.HelveticaOblique);
 
   const width = page.getWidth();
   const height = page.getHeight();
+  const black = rgb(0, 0, 0);
+
+  function useFont(type: "regular" | "bold" | "italic") {
+    if (type === "bold") return bold;
+    if (type === "italic") return italic;
+    return font;
+  }
 
   function drawText(
     text: string,
     x: number,
     y: number,
     size = 9,
-    useBold = false
+    type: "regular" | "bold" | "italic" = "regular"
   ) {
     page.drawText(text, {
       x,
       y,
       size,
-      font: useBold ? bold : font,
-      color: rgb(0, 0, 0),
+      font: useFont(type),
+      color: black,
     });
   }
 
-  function drawLine(x1: number, y1: number, x2: number, y2: number, thickness = 1) {
+  function drawCenteredText(
+    text: string,
+    centerX: number,
+    y: number,
+    size = 9,
+    type: "regular" | "bold" | "italic" = "regular"
+  ) {
+    const selected = useFont(type);
+    const textWidth = selected.widthOfTextAtSize(text, size);
+
+    page.drawText(text, {
+      x: centerX - textWidth / 2,
+      y,
+      size,
+      font: selected,
+      color: black,
+    });
+  }
+
+  function drawLine(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    thickness = 0.8
+  ) {
     page.drawLine({
       start: { x: x1, y: y1 },
       end: { x: x2, y: y2 },
       thickness,
-      color: rgb(0, 0, 0),
+      color: black,
     });
   }
 
-  drawText("Civil Service Form No. 48", 40, height - 30, 8);
-  drawText("DAILY TIME RECORD", 225, height - 50, 16, true);
+  function drawTextCenterInCell(
+    text: string,
+    x: number,
+    y: number,
+    w: number,
+    h: number,
+    size = 8,
+    type: "regular" | "bold" | "italic" = "regular"
+  ) {
+    const selected = useFont(type);
+    const textWidth = selected.widthOfTextAtSize(text, size);
 
-  drawText(`Name: ${fullName}`, 40, height - 90, 10);
-  drawText(`For the month of ${monthStart.slice(0, 7)}`, 40, height - 108, 10);
-
-  const tableTop = height - 150;
-  const rowHeight = 20;
-
-  const colX = {
-    day: 40,
-    amIn: 90,
-    amOut: 150,
-    pmIn: 220,
-    pmOut: 280,
-    hours: 350,
-    minutes: 420,
-  };
-
-  drawText("Day", colX.day, tableTop + 8, 9, true);
-  drawText("A.M. In", colX.amIn, tableTop + 8, 9, true);
-  drawText("A.M. Out", colX.amOut, tableTop + 8, 9, true);
-  drawText("P.M. In", colX.pmIn, tableTop + 8, 9, true);
-  drawText("P.M. Out", colX.pmOut, tableTop + 8, 9, true);
-  drawText("Hours", colX.hours, tableTop + 8, 9, true);
-  drawText("Minutes", colX.minutes, tableTop + 8, 9, true);
-
-  drawLine(35, tableTop, 560, tableTop, 1.2);
-
-  const totalDays = daysInMonth(year, month);
-
-  for (let day = 1; day <= 31; day++) {
-    const y = tableTop - day * rowHeight;
-
-    drawLine(35, y, 560, y, 0.6);
-
-    drawText(String(day), colX.day, y + 6, 9);
-
-    if (day <= totalDays) {
-      const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
-        2,
-        "0"
-      )}`;
-
-      const log = logsByDate.get(dateKey);
-      if (log) {
-        const hm = getHoursMinutes(Number(log.total_work_seconds ?? 0));
-
-        drawText(formatTime(log.am_in_at), colX.amIn, y + 6, 9);
-        drawText(formatTime(log.am_out_at), colX.amOut, y + 6, 9);
-        drawText(formatTime(log.pm_in_at), colX.pmIn, y + 6, 9);
-        drawText(formatTime(log.pm_out_at), colX.pmOut, y + 6, 9);
-        drawText(hm.hours, colX.hours, y + 6, 9);
-        drawText(hm.minutes, colX.minutes, y + 6, 9);
-      }
-    }
+    page.drawText(text, {
+      x: x + (w - textWidth) / 2,
+      y: y + (h - size) / 2 + 1,
+      size,
+      font: selected,
+      color: black,
+    });
   }
 
-  drawLine(35, tableTop - 31 * rowHeight - 10, 560, tableTop - 31 * rowHeight - 10, 1.2);
+  const left = 34;
+  const right = width - 34;
 
-  drawText(
-    "I certify on my honor that the above is a true and correct report of the hours of work performed.",
-    40,
-    115,
-    8
+  drawText("Civil Service Form No. 48", left, height - 22, 7, "italic");
+  drawCenteredText("DAILY TIME RECORD", width / 2, height - 45, 14, "bold");
+  drawLine(width / 2 - 42, height - 50, width / 2 + 42, height - 50, 0.7);
+
+  const nameLineY = height - 84;
+  drawLine(left + 125, nameLineY, right - 10, nameLineY, 0.7);
+  drawCenteredText(fullName, width / 2 + 20, nameLineY + 3, 8.5, "regular");
+  drawCenteredText("(Name)", width / 2, nameLineY - 11, 7, "italic");
+
+  const metaY = height - 108;
+  drawText("For the month of", left, metaY, 7.5, "italic");
+  drawLine(left + 68, metaY - 1, left + 186, metaY - 1, 0.7);
+  drawText(monthName(month), left + 92, metaY + 2, 7.5);
+
+  drawText("20", left + 198, metaY, 7.5, "italic");
+  drawLine(left + 212, metaY - 1, left + 262, metaY - 1, 0.7);
+  drawText(String(year), left + 222, metaY + 2, 7.5);
+
+  drawText("Official hours of arrival", left, metaY - 15, 7.5, "italic");
+  drawText("and departure", left + 22, metaY - 28, 7.5, "italic");
+
+  drawText("Regular Days", left + 225, metaY - 15, 7.5, "italic");
+  drawLine(left + 195, metaY - 18, left + 305, metaY - 18, 0.7);
+
+  drawText("Saturdays", left + 232, metaY - 28, 7.5, "italic");
+  drawLine(left + 195, metaY - 31, left + 305, metaY - 31, 0.7);
+
+  const tableTop = height - 150;
+  const header1H = 17;
+  const header2H = 20;
+  const rowH = 18;
+  const totalH = 18;
+
+  const dayW = 28;
+  const amInW = 72;
+  const amOutW = 72;
+  const pmInW = 72;
+  const pmOutW = 72;
+  const hoursW = 46;
+  const minutesW = 46;
+
+  const x0 = left;
+  const x1 = x0 + dayW;
+  const x2 = x1 + amInW;
+  const x3 = x2 + amOutW;
+  const x4 = x3 + pmInW;
+  const x5 = x4 + pmOutW;
+  const x6 = x5 + hoursW;
+  const x7 = x6 + minutesW;
+
+  const topY = tableTop;
+  const header1Bottom = topY - header1H;
+  const header2Bottom = header1Bottom - header2H;
+  const bodyBottom = header2Bottom - rowH * 31;
+  const totalBottom = bodyBottom - totalH;
+
+  drawLine(x0, topY, x7, topY, 0.9);
+  drawLine(x0, header1Bottom, x7, header1Bottom, 0.7);
+  drawLine(x0, header2Bottom, x7, header2Bottom, 0.7);
+  drawLine(x0, bodyBottom, x7, bodyBottom, 0.7);
+  drawLine(x0, totalBottom, x7, totalBottom, 0.9);
+
+  drawLine(x0, topY, x0, totalBottom, 0.8);
+  drawLine(x1, topY, x1, totalBottom, 0.7);
+  drawLine(x2, topY, x2, totalBottom, 0.7);
+  drawLine(x3, topY, x3, totalBottom, 0.7);
+  drawLine(x4, topY, x4, totalBottom, 0.7);
+  drawLine(x5, topY, x5, totalBottom, 0.7);
+  drawLine(x6, header1Bottom, x6, totalBottom, 0.7);
+  drawLine(x7, topY, x7, totalBottom, 0.8);
+
+  drawTextCenterInCell("Days", x0, header2Bottom, dayW, header1H + header2H, 7.5, "bold");
+  drawTextCenterInCell("A. M.", x1, header1Bottom, amInW + amOutW, header1H, 7.5, "bold");
+  drawTextCenterInCell("P. M.", x3, header1Bottom, pmInW + pmOutW, header1H, 7.5, "bold");
+  drawTextCenterInCell("UNDER", x5, header1Bottom + 8, hoursW + minutesW, 8, 7, "bold");
+  drawTextCenterInCell("TIME", x5, header1Bottom, hoursW + minutesW, 8, 7, "bold");
+
+  drawTextCenterInCell("ARRIVAL", x1, header2Bottom, amInW, header2H, 6, "bold");
+  drawTextCenterInCell("DEPARTURE", x2, header2Bottom, amOutW, header2H, 6, "bold");
+  drawTextCenterInCell("ARRIVAL", x3, header2Bottom, pmInW, header2H, 6, "bold");
+  drawTextCenterInCell("DEPARTURE", x4, header2Bottom, pmOutW, header2H, 6, "bold");
+  drawTextCenterInCell("Hours", x5, header2Bottom, hoursW, header2H, 6, "bold");
+  drawTextCenterInCell("Minutes", x6, header2Bottom, minutesW, header2H, 6, "bold");
+
+  for (let i = 1; i <= 31; i++) {
+    const y = header2Bottom - i * rowH;
+    drawLine(x0, y, x7, y, 0.45);
+  }
+
+  let totalHours = 0;
+  let totalMinutes = 0;
+  const actualDays = daysInMonth(year, month);
+
+  for (let day = 1; day <= 31; day++) {
+    const rowTop = header2Bottom - (day - 1) * rowH;
+    const rowBottom = rowTop - rowH;
+    const textY = rowBottom + 5.5;
+
+    drawText(String(day), x0 + 9, textY, 7.2);
+
+    if (day > actualDays) continue;
+
+    const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const log = logsByDate.get(dateKey);
+
+    if (!log) continue;
+
+    const hm = getHoursMinutes(Number(log.total_work_seconds ?? 0));
+    totalHours += hm.hours;
+    totalMinutes += hm.minutes;
+
+    drawText(formatTime(log.am_in_at), x1 + 16, textY, 7);
+    drawText(formatTime(log.am_out_at), x2 + 16, textY, 7);
+    drawText(formatTime(log.pm_in_at), x3 + 16, textY, 7);
+    drawText(formatTime(log.pm_out_at), x4 + 16, textY, 7);
+    drawText(String(hm.hours), x5 + 16, textY, 7);
+    drawText(String(hm.minutes), x6 + 14, textY, 7);
+  }
+
+  totalHours += Math.floor(totalMinutes / 60);
+  totalMinutes = totalMinutes % 60;
+
+  drawTextCenterInCell(
+    "TOTAL",
+    x0,
+    totalBottom,
+    dayW + amInW + amOutW + pmInW + pmOutW,
+    totalH,
+    7,
+    "bold"
+  );
+  drawTextCenterInCell(String(totalHours), x5, totalBottom, hoursW, totalH, 7, "bold");
+  drawTextCenterInCell(
+    String(totalMinutes),
+    x6,
+    totalBottom,
+    minutesW,
+    totalH,
+    7,
+    "bold"
   );
 
-  drawText("In-Charge", 420, 55, 10, true);
-  drawLine(360, 70, 540, 70, 1);
+  const certY = 104;
+  drawText(
+    "I CERTIFY on my honor that the above is a true and correct",
+    left + 3,
+    certY,
+    6.5,
+    "italic"
+  );
+  drawText(
+    "report of the hours of work performed, record of which was made",
+    left + 3,
+    certY - 9,
+    6.5,
+    "italic"
+  );
+  drawText(
+    "daily at the time of arrival and departure from office.",
+    left + 3,
+    certY - 18,
+    6.5,
+    "italic"
+  );
+
+  const sigLineY = 44;
+  drawLine(width - 200, sigLineY + 12, width - 48, sigLineY + 12, 0.7);
+  drawText("In-Charge", width - 96, sigLineY, 7.5, "italic");
+  drawText("(See Instructions on back)", width - 155, sigLineY - 12, 5.8);
 
   const pdfBytes = await pdfDoc.save();
 
@@ -221,6 +383,7 @@ export async function GET(req: NextRequest) {
         2,
         "0"
       )}.pdf"`,
+      "Cache-Control": "no-store",
     },
   });
 }
