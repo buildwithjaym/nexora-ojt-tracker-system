@@ -10,7 +10,7 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://nexora.app"),
+  metadataBase: new URL("https://nexora-ojt-tracker.online"),
   title: {
     default: "Nexora — Trusted OJT Tracking for Schools and Institutions",
     template: "%s | Nexora",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     title: "Nexora — Trusted OJT Tracking for Schools and Institutions",
     description:
       "Simplify OJT management with role-based dashboards for admins, teachers, and students.",
-    url: "https://nexora.app",
+    url: "https://nexora-ojt-tracker.online",
     siteName: "Nexora",
     locale: "en_US",
     type: "website",
