@@ -20,13 +20,18 @@ export default async function StudentLayout({
     redirect("/login");
   }
 
-  const { data: profile, error } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id, role, is_active")
     .eq("id", user.id)
     .single();
 
-  if (error || !profile || profile.role !== "student" || !profile.is_active) {
+  if (
+    profileError ||
+    !profile ||
+    profile.role !== "student" ||
+    !profile.is_active
+  ) {
     redirect("/login");
   }
 
