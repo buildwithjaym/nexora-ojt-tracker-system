@@ -31,37 +31,37 @@ const benefits = [
     icon: ShieldCheck,
     title: "Trusted attendance records",
     description:
-      "Build stronger confidence in OJT tracking with a system designed for accountability, consistency, and cleaner validation.",
+      "Build stronger confidence in OJT tracking with a platform designed for accountability, consistency, and cleaner attendance validation.",
   },
   {
     icon: Clock3,
     title: "Less manual follow-up",
     description:
-      "Reduce repetitive checking, scattered logs, and unclear records with one organized workflow for daily practicum tracking.",
+      "Reduce repetitive checking, scattered logs, and unclear records with one organized OJT workflow for schools, advisers, and students.",
   },
   {
     icon: CalendarCheck2,
     title: "Clear progress visibility",
     description:
-      "Give students, advisers, and administrators a better way to see attendance, hours completed, and day-by-day practicum activity.",
+      "Give students, advisers, and administrators a better way to see attendance, completed hours, practicum activity, and overall progress.",
   },
   {
     icon: Users2,
     title: "Better coordination",
     description:
-      "Keep institutions, teachers, and students aligned through a more structured and dependable monitoring experience.",
+      "Keep institutions, teachers, and students aligned through a more structured and dependable practicum monitoring experience.",
   },
   {
     icon: MapPinned,
     title: "Reliable monitoring",
     description:
-      "Support location-aware attendance, checkpoint validation, and a more dependable way to monitor on-site practicum activity.",
+      "Support location-aware attendance, checkpoint validation, and a more dependable way to monitor on-site OJT activity.",
   },
   {
     icon: WalletCards,
     title: "Easy to adopt",
     description:
-      "Nexora is designed to feel simple for students and practical for institutions without adding unnecessary complexity.",
+      "Nexora is designed to feel simple for students and practical for institutions without unnecessary complexity.",
   },
 ];
 
@@ -70,19 +70,19 @@ const steps = [
     step: "01",
     title: "Set up your practicum structure",
     description:
-      "Organize students, advisers, offices, batches, and required hours in one clear system that is easier to manage.",
+      "Organize students, advisers, offices, batches, and required hours in one OJT system that is easier to manage.",
   },
   {
     step: "02",
     title: "Track attendance with clarity",
     description:
-      "Students record their daily checkpoints while the system keeps attendance guided, structured, and easier to trust.",
+      "Students record daily attendance while the system keeps each checkpoint guided, structured, and easier to trust.",
   },
   {
     step: "03",
     title: "Monitor progress confidently",
     description:
-      "Teachers and institutions gain a cleaner view of attendance, progress, and student activity without relying on scattered tools.",
+      "Teachers and institutions gain a cleaner view of attendance, practicum progress, and student activity without relying on scattered tools.",
   },
 ];
 
@@ -102,7 +102,7 @@ const faqs = [
   {
     question: "What problem does Nexora solve?",
     answer:
-      "It helps reduce the confusion of manual attendance tracking, disconnected records, and inconsistent practicum monitoring by bringing everything into one focused platform.",
+      "It reduces the confusion of manual attendance tracking, disconnected records, and inconsistent practicum monitoring by bringing everything into one focused platform.",
   },
   {
     question: "Is Nexora only for students?",
@@ -112,11 +112,9 @@ const faqs = [
   {
     question: "Why is Nexora different from generic attendance tools?",
     answer:
-      "Nexora is built specifically for OJT and practicum operations. It focuses on progress visibility, attendance structure, coordination, and institution-friendly monitoring.",
+      "Nexora is built specifically for OJT and practicum operations. It focuses on attendance structure, progress visibility, coordination, and institution-friendly monitoring.",
   },
 ];
-
-
 
 function SectionHeading({
   eyebrow,
@@ -128,15 +126,15 @@ function SectionHeading({
   description: string;
 }) {
   return (
-    <div className="mx-auto max-w-2xl text-center">
+    <div className="mx-auto max-w-3xl text-center">
       <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
         <Sparkles className="h-3.5 w-3.5" />
         {eyebrow}
       </div>
-      <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">
+      <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
         {title}
       </h2>
-      <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base">
+      <p className="mt-4 text-sm leading-7 text-muted-foreground sm:text-base sm:leading-8">
         {description}
       </p>
     </div>
@@ -145,11 +143,11 @@ function SectionHeading({
 
 function AnimatedProgress() {
   return (
-    <div className="rounded-[28px] border border-white/10 bg-card/90 p-5 shadow-[0_20px_80px_-20px_rgba(37,99,235,0.35)] backdrop-blur sm:p-6">
+    <div className="rounded-[28px] border border-white/10 bg-card/90 p-4 shadow-[0_20px_80px_-20px_rgba(37,99,235,0.35)] backdrop-blur sm:p-6">
       <div className="flex items-center gap-3">
         <div className="relative h-11 w-11 overflow-hidden rounded-2xl ring-1 ring-white/10">
           <Image
-            src="/logo.png"
+            src="/Nexora.png"
             alt="Nexora logo"
             fill
             className="object-cover"
@@ -206,28 +204,48 @@ function AnimatedProgress() {
   );
 }
 
-export default function HomePage() {
+export default function LandingPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Nexora",
+    applicationCategory: "EducationalApplication",
+    operatingSystem: "Web",
+    url: "https://nexora-ojt-tracker.online",
+    description:
+      "Nexora is a modern OJT tracking system for schools, advisers, coordinators, and students.",
+    brand: {
+      "@type": "Brand",
+      name: "Nexora",
+    },
+  };
+
   return (
     <main className="relative overflow-x-hidden bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.20),transparent_34%),radial-gradient(circle_at_78%_18%,rgba(20,184,166,0.14),transparent_24%),radial-gradient(circle_at_bottom,rgba(37,99,235,0.08),transparent_28%)]" />
 
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-6">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="relative h-10 w-10 overflow-hidden rounded-2xl ring-1 ring-white/10">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10">
               <Image
-                src="/logo.png"
+                src="/Nexora.png"
                 alt="Nexora logo"
                 fill
                 className="object-cover"
                 sizes="40px"
               />
             </div>
-            <div>
-              <p className="text-sm font-semibold tracking-tight sm:text-base">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold tracking-tight sm:text-base">
                 Nexora
               </p>
-              <p className="text-[11px] text-muted-foreground sm:text-xs">
+              <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
                 Trusted OJT Tracking System
               </p>
             </div>
@@ -263,7 +281,7 @@ export default function HomePage() {
       </header>
 
       <section className="relative">
-        <div className="mx-auto grid min-h-[calc(100vh-64px)] max-w-6xl items-center gap-10 px-5 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:py-24">
+        <div className="mx-auto grid min-h-[calc(100vh-64px)] max-w-6xl items-center gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12 lg:py-24">
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -272,10 +290,10 @@ export default function HomePage() {
           >
             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
               <BadgeCheck className="h-4 w-4" />
-              Built for institutions, advisers, and practicum students
+              Built for schools, advisers, coordinators, and practicum students
             </div>
 
-            <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 max-w-4xl text-4xl font-bold leading-[1.02] tracking-tight sm:text-5xl lg:text-6xl">
               A more
               <span className="bg-gradient-to-r from-primary via-blue-400 to-accent bg-clip-text text-transparent">
                 {" "}
@@ -285,16 +303,15 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-5 max-w-xl text-sm leading-7 text-muted-foreground sm:text-base sm:leading-8">
-              Nexora helps schools manage practicum workflows through a cleaner
-              experience for attendance, progress visibility, coordination, and
-              monitoring — built to feel easier for students and more reliable
-              for institutions.
+              Nexora is a modern OJT tracking system that helps schools, advisers,
+              coordinators, and students manage attendance, practicum progress,
+              monitoring, and reports in one reliable platform built for everyday use.
             </p>
 
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link
                 href="/login"
-                className="inline-flex items-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:-translate-y-0.5 hover:opacity-95"
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:-translate-y-0.5 hover:opacity-95 sm:w-auto"
               >
                 Start with Nexora
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -302,7 +319,7 @@ export default function HomePage() {
 
               <a
                 href="#benefits"
-                className="inline-flex items-center rounded-2xl border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-secondary"
+                className="inline-flex w-full items-center justify-center rounded-2xl border border-border bg-card px-5 py-3 text-sm font-semibold text-foreground transition hover:bg-secondary sm:w-auto"
               >
                 Discover the benefits
                 <ChevronRight className="ml-2 h-4 w-4" />
@@ -341,7 +358,7 @@ export default function HomePage() {
       </section>
 
       <section className="border-y border-border/60 bg-card/40">
-        <div className="mx-auto grid max-w-6xl gap-4 px-5 py-5 text-sm text-muted-foreground sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl gap-4 px-4 py-5 text-sm text-muted-foreground sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
           {highlights.map((item) => (
             <div key={item} className="flex items-center gap-3">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-accent" />
@@ -351,7 +368,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="benefits" className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-20">
+      <section id="benefits" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <motion.div {...fadeUp}>
           <SectionHeading
             eyebrow="Why Nexora"
@@ -393,7 +410,7 @@ export default function HomePage() {
 
       <section
         id="how-it-works"
-        className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-20"
+        className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20"
       >
         <motion.div {...fadeUp}>
           <SectionHeading
@@ -427,7 +444,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-16 sm:px-6 sm:py-20">
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <motion.div
           {...fadeUp}
           className="overflow-hidden rounded-[32px] border border-primary/20 bg-gradient-to-br from-primary/12 via-card to-accent/10 p-6 shadow-[0_20px_80px_-20px_rgba(37,99,235,0.30)] sm:p-8 lg:p-10"
@@ -449,17 +466,17 @@ export default function HomePage() {
                 managing practicum operations.
               </p>
 
-              <div className="mt-7 flex flex-wrap gap-3">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
                 <Link
                   href="/login"
-                  className="inline-flex items-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:-translate-y-0.5"
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-xl shadow-primary/25 transition hover:-translate-y-0.5 sm:w-auto"
                 >
                   Launch Nexora
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
                 <a
                   href="#faqs"
-                  className="inline-flex items-center rounded-2xl border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-secondary"
+                  className="inline-flex w-full items-center justify-center rounded-2xl border border-border bg-card px-5 py-3 text-sm font-semibold transition hover:bg-secondary sm:w-auto"
                 >
                   Read FAQs
                 </a>
@@ -490,7 +507,7 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      <section id="faqs" className="mx-auto max-w-4xl px-5 py-16 sm:px-6 sm:py-20">
+      <section id="faqs" className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-20">
         <motion.div {...fadeUp}>
           <SectionHeading
             eyebrow="FAQs"
@@ -522,7 +539,7 @@ export default function HomePage() {
                 </div>
                 <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground transition group-open:rotate-90" />
               </summary>
-              <p className="mt-4 pl-11 text-sm leading-7 text-muted-foreground">
+              <p className="mt-4 pl-0 text-sm leading-7 text-muted-foreground sm:pl-11">
                 {faq.answer}
               </p>
             </motion.details>
@@ -531,11 +548,11 @@ export default function HomePage() {
       </section>
 
       <footer className="border-t border-border/70">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-3">
             <div className="relative h-9 w-9 overflow-hidden rounded-xl ring-1 ring-white/10">
               <Image
-                src="/logo.png"
+                src="/Nexora.png"
                 alt="Nexora logo"
                 fill
                 className="object-cover"
