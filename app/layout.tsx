@@ -8,48 +8,68 @@ const inter = Inter({
   variable: "--font-sans",
 });
 
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://nexora-ojt-tracker.online"),
   title: {
-    default: "Nexora — Trusted OJT Tracking for Schools and Institutions",
+    default: "Nexora - Trusted OJT Tracking System for Schools and Institutions",
     template: "%s | Nexora",
   },
   description:
-    "Nexora is a modern OJT tracking system for schools, advisers, and students. Manage offices, assignments, attendance, progress, and reports in one trusted platform.",
-  keywords: [
-    "Nexora",
-    "OJT tracking system",
-    "practicum tracker",
-    "internship monitoring system",
-    "student attendance tracker",
-    "school OJT system",
-    "teacher adviser monitoring",
-    "office assignment tracker",
-  ],
+    "Nexora is a modern OJT tracking system for schools, advisers, coordinators, and students. Manage attendance, practicum assignments, progress tracking, reports, and monitoring in one trusted platform.",
+  applicationName: "Nexora",
   authors: [{ name: "Nexora" }],
   creator: "Nexora",
   publisher: "Nexora",
-  applicationName: "Nexora",
   category: "Education Technology",
+  keywords: [
+    "Nexora",
+    "OJT tracking system",
+    "OJT management system",
+    "internship tracking system",
+    "practicum tracking system",
+    "student attendance tracking",
+    "attendance monitoring for schools",
+    "school internship monitoring",
+    "teacher adviser monitoring system",
+    "student progress tracking system",
+  ],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "Nexora — Trusted OJT Tracking for Schools and Institutions",
-    description:
-      "Simplify OJT management with role-based dashboards for admins, teachers, and students.",
+    type: "website",
     url: "https://nexora-ojt-tracker.online",
     siteName: "Nexora",
+    title: "Nexora - Trusted OJT Tracking System for Schools and Institutions",
+    description:
+      "Simplify OJT attendance, student progress tracking, adviser monitoring, and institutional coordination with Nexora.",
     locale: "en_US",
-    type: "website",
+    images: [
+      {
+        url: "/Nexora.png",
+        width: 1200,
+        height: 630,
+        alt: "Nexora OJT Tracking System",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nexora — Trusted OJT Tracking for Schools and Institutions",
+    title: "Nexora - Trusted OJT Tracking System for Schools and Institutions",
     description:
-      "Simplify OJT management with role-based dashboards for admins, teachers, and students.",
+      "Simplify OJT attendance, student progress tracking, adviser monitoring, and institutional coordination with Nexora.",
+    images: ["/Nexora.png"],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
   icons: {
     icon: "/favicon.ico",
@@ -70,18 +90,16 @@ export default function RootLayout({
       >
         {children}
         <Toaster
-  position="top-right"
-  richColors
-  closeButton
-  toastOptions={{
-    classNames: {
-      toast: "rounded-2xl",
-    },
-  }}
-/>
-
+          position="top-right"
+          richColors
+          closeButton
+          toastOptions={{
+            classNames: {
+              toast: "rounded-2xl",
+            },
+          }}
+        />
       </body>
     </html>
   );
 }
-
