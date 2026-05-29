@@ -116,7 +116,7 @@ export default function AdminLayout({
                 </button>
 
                 <Link
-                  href="/admin/settings"
+                  href="#"
                   className="flex items-center gap-3 rounded-2xl border border-border bg-card px-3 py-2 transition hover:bg-muted"
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">
