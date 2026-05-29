@@ -1401,3 +1401,170 @@ CREATE TRIGGER trg_sync_student_completed_hours
 AFTER INSERT OR UPDATE OR DELETE ON public.attendance_days
 FOR EACH ROW
 EXECUTE FUNCTION public.sync_student_completed_hours();
+'''
+DROP TRIGGER IF EXISTS trg_sync_student_completed_hours ON public.attendance_days;
+DROP FUNCTION IF EXISTS public.sync_student_completed_hours();
+
+CREATE OR REPLACE FUNCTION public.sync_student_completed_hours()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  target_student_id uuid;
+  old_student_id uuid;
+BEGIN
+  -- Figure out which student is affected
+  IF TG_OP = 'INSERT' THEN
+    target_student_id := NEW.student_id;
+
+  ELSIF TG_OP = 'UPDATE' THEN
+    target_student_id := NEW.student_id;
+    old_student_id := OLD.student_id;
+
+  ELSIF TG_OP = 'DELETE' THEN
+    target_student_id := OLD.student_id;
+  END IF;
+
+  -- Recompute the current student's completed hours
+  IF target_student_id IS NOT NULL THEN
+    UPDATE public.students s
+    SET
+      completed_hours = COALESCE((
+        SELECT SUM(ad.total_work_seconds)::double precision / 3600.0
+        FROM public.attendance_days ad
+        WHERE ad.student_id = target_student_id
+      ), 0),
+      updated_at = NOW()
+    WHERE s.id = target_student_id;
+  END IF;
+
+  -- If UPDATE moved the attendance row to another student,
+  -- also recompute the old student's hours
+  IF TG_OP = 'UPDATE'
+     AND old_student_id IS NOT NULL
+     AND old_student_id IS DISTINCT FROM target_student_id THEN
+    UPDATE public.students s
+    SET
+      completed_hours = COALESCE((
+        SELECT SUM(ad.total_work_seconds)::double precision / 3600.0
+        FROM public.attendance_days ad
+        WHERE ad.student_id = old_student_id
+      ), 0),
+      updated_at = NOW()
+    WHERE s.id = old_student_id;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  ELSE
+    RETURN NEW;
+  END IF;
+END;
+$$;
+
+CREATE TRIGGER trg_sync_student_completed_hours
+AFTER INSERT OR UPDATE OR DELETE
+ON public.attendance_days
+FOR EACH ROW
+EXECUTE FUNCTION public.sync_student_completed_hours();
+
+'''
+
+create table if not exists critics (
+  id uuid primary key default gen_random_uuid(),
+  profile_id uuid references profiles(id) on delete cascade,
+  office_id uuid references offices(id) on delete set null,
+  full_name text not null,
+  email text not null,
+  contact_number text,
+  position text,
+  is_active boolean default true,
+  created_at timestamp with time zone default now()
+);
+
+alter table public.profiles
+drop constraint if exists profiles_role_check;
+
+alter table public.profiles
+add constraint profiles_role_check
+check (
+  role = any (
+    array[
+      'admin'::text,
+      'teacher'::text,
+      'student'::text,
+      'critic'::text
+    ]
+  )
+);
+
+create table public.critics (
+  id uuid not null default gen_random_uuid(),
+  profile_id uuid not null,
+  office_id uuid not null,
+  first_name text not null,
+  middle_name text null,
+  last_name text not null,
+  suffix text null,
+  email text not null,
+  phone text null,
+  position text null,
+  status text not null default 'active'::text,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+
+  constraint critics_pkey primary key (id),
+  constraint critics_profile_id_key unique (profile_id),
+  constraint critics_email_key unique (email),
+  constraint critics_profile_id_fkey foreign key (profile_id)
+    references profiles(id) on delete cascade,
+  constraint critics_office_id_fkey foreign key (office_id)
+    references offices(id) on delete restrict,
+  constraint critics_status_check check (
+    status = any (array['active'::text, 'inactive'::text])
+  )
+);
+
+create index if not exists idx_critics_office_id
+on public.critics using btree (office_id);
+
+create index if not exists idx_critics_status
+on public.critics using btree (status);
+
+create index if not exists idx_critics_created_at
+on public.critics using btree (created_at desc);
+
+create trigger trg_critics_updated_at
+before update on critics
+for each row
+execute function set_updated_at();
+
+
+alter table public.critics enable row level security;
+
+create policy "Admins can manage critics"
+on public.critics
+for all
+to authenticated
+using (
+  exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid()
+    and profiles.role = 'admin'
+  )
+)
+with check (
+  exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid()
+    and profiles.role = 'admin'
+  )
+);
+
+create policy "Critics can view own critic profile"
+on public.critics
+for select
+to authenticated
+using (profile_id = auth.uid());
