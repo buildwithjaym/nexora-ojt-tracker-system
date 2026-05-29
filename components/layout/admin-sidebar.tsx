@@ -16,6 +16,7 @@ import {
   Users,
   X,
   ChevronRight,
+  UserCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -23,6 +24,7 @@ const navItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Students", href: "/admin/students", icon: Users },
   { label: "Teachers", href: "/admin/teachers", icon: GraduationCap },
+  { label: "Critics", href: "/admin/critics", icon: UserCheck },
   { label: "Offices", href: "/admin/offices", icon: Building2 },
   { label: "Assign Students", href: "/admin/assignments", icon: ClipboardList },
   { label: "Batches", href: "/admin/batches", icon: Layers3 },
@@ -125,7 +127,7 @@ function SidebarContent({
         <div className="mb-3 rounded-2xl border border-border bg-background px-4 py-3">
           <p className="text-xs font-medium text-foreground">Admin Session</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Manage students, assignments, offices, and batches.
+            Manage students, teachers, critics, offices, and assignments.
           </p>
         </div>
 
