@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type ProfileRole = "admin" | "teacher" | "student";
+type ProfileRole = "admin" | "teacher" | "student" | "critic";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,6 +39,8 @@ export default function LoginPage() {
         return "/teacher";
       case "student":
         return "/student";
+      case "critic":
+        return"/critic";
       default:
         return "/";
     }
