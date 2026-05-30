@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   Marker,
@@ -21,13 +21,48 @@ L.Icon.Default.mergeOptions({
 });
 
 const ISABELA_CITY_BASILAN: [number, number] = [6.7081, 121.971];
+
 const SEARCH_BIAS_LAT = 6.7081;
 const SEARCH_BIAS_LON = 121.971;
+
+// Rough Basilan / nearby search box.
+// Format for Nominatim viewbox: left,top,right,bottom = lon,lat,lon,lat
+const BASILAN_VIEWBOX = "121.55,6.95,122.35,6.35";
 
 type Props = {
   latitude: string;
   longitude: string;
   onChange: (coords: { lat: number; lng: number }) => void;
+};
+
+type SearchResult = {
+  source: "Nominatim" | "Photon";
+  title: string;
+  subtitle: string;
+  lat: number;
+  lng: number;
+  importance?: number;
+};
+
+type NominatimItem = {
+  display_name?: string;
+  lat?: string;
+  lon?: string;
+  name?: string;
+  type?: string;
+  class?: string;
+  importance?: number;
+  address?: {
+    road?: string;
+    suburb?: string;
+    city?: string;
+    town?: string;
+    municipality?: string;
+    county?: string;
+    state?: string;
+    country?: string;
+  };
+  namedetails?: Record<string, string>;
 };
 
 type PhotonFeature = {
@@ -61,6 +96,8 @@ function MapEvents({
         lat: Number(e.latlng.lat.toFixed(6)),
         lng: Number(e.latlng.lng.toFixed(6)),
       });
+
+      toast.success("Location pinned from map click.");
     },
   });
 
@@ -91,67 +128,130 @@ function normalizeText(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
 }
 
-function buildResultLabel(feature: PhotonFeature) {
-  const props = feature.properties ?? {};
-
-  const title =
-    props.name ||
-    props.street ||
-    props.suburb ||
-    props.city ||
-    "Unnamed location";
-
-  const preferredSubtitle = [props.street, props.suburb, props.city]
-    .filter(Boolean)
-    .join(", ");
-
-  const fallbackSubtitle = [props.county, props.state, props.country]
-    .filter(Boolean)
-    .join(", ");
-
-  return {
-    title,
-    subtitle: preferredSubtitle || fallbackSubtitle || "No address details",
-  };
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function scoreFeature(feature: PhotonFeature, rawQuery: string) {
-  const props = feature.properties ?? {};
-  const query = normalizeText(rawQuery);
+function expandAcronyms(query: string) {
+  const lower = query.toLowerCase();
 
-  const name = normalizeText(props.name);
-  const street = normalizeText(props.street);
-  const suburb = normalizeText(props.suburb);
-  const city = normalizeText(props.city);
-  const county = normalizeText(props.county);
-  const state = normalizeText(props.state);
+  if (lower.includes("dict")) {
+    return [
+      query,
+      query.replace(/dict/gi, "Department of Information and Communications Technology"),
+      `DICT Office ${query}`,
+      `Department of Information and Communications Technology ${query}`,
+    ];
+  }
+
+  if (lower.includes("psa")) {
+    return [
+      query,
+      query.replace(/psa/gi, "Philippine Statistics Authority"),
+      `PSA Office ${query}`,
+      `Philippine Statistics Authority ${query}`,
+    ];
+  }
+
+  if (lower.includes("deped")) {
+    return [
+      query,
+      query.replace(/deped/gi, "Department of Education"),
+      `DepEd Office ${query}`,
+      `Department of Education ${query}`,
+    ];
+  }
+
+  return [
+    query,
+    `${query} office`,
+    `${query} Basilan`,
+    `${query} Isabela Basilan`,
+    `${query} Philippines`,
+  ];
+}
+
+function buildNominatimTitle(item: NominatimItem) {
+  return (
+    item.name ||
+    item.namedetails?.name ||
+    item.display_name?.split(",")[0] ||
+    "Unnamed location"
+  );
+}
+
+function buildNominatimSubtitle(item: NominatimItem) {
+  const address = item.address ?? {};
+
+  return [
+    address.road,
+    address.suburb,
+    address.city || address.town || address.municipality,
+    address.county,
+    address.state,
+    address.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function scoreResult(result: SearchResult, rawQuery: string) {
+  const query = normalizeText(rawQuery);
+  const title = normalizeText(result.title);
+  const subtitle = normalizeText(result.subtitle);
 
   let score = 0;
 
-  if (!query) return score;
+  if (title === query) score += 150;
+  if (title.startsWith(query)) score += 110;
+  if (title.includes(query)) score += 90;
+  if (subtitle.includes(query)) score += 40;
 
-  if (name === query) score += 120;
-  if (name.startsWith(query)) score += 90;
-  if (name.includes(query)) score += 70;
+  if (subtitle.includes("basilan")) score += 60;
+  if (subtitle.includes("isabela")) score += 40;
+  if (subtitle.includes("philippines")) score += 25;
 
-  if (street.includes(query)) score += 30;
-  if (suburb.includes(query)) score += 20;
+  if (title.includes("office")) score += 15;
+  if (title.includes("department")) score += 12;
+  if (title.includes("branch")) score += 10;
 
-  if (city.includes("isabela")) score += 30;
-  if (county.includes("basilan")) score += 20;
-  if (state.includes("basilan")) score += 20;
-
-  if (name.includes("office")) score += 8;
-  if (name.includes("branch")) score += 8;
+  if (result.source === "Nominatim") score += 8;
+  if (result.importance) score += result.importance * 20;
 
   return score;
 }
 
-async function searchPhoton(query: string) {
+function dedupeResults(results: SearchResult[]) {
+  const seen = new Set<string>();
+
+  return results.filter((result) => {
+    const key = `${result.lat.toFixed(5)}-${result.lng.toFixed(5)}-${normalizeText(
+      result.title
+    )}`;
+
+    if (seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
+}
+
+async function searchNominatim(query: string): Promise<SearchResult[]> {
+  const params = new URLSearchParams({
+    q: query,
+    format: "jsonv2",
+    addressdetails: "1",
+    namedetails: "1",
+    extratags: "1",
+    limit: "8",
+    countrycodes: "ph",
+    viewbox: BASILAN_VIEWBOX,
+    bounded: "0",
+    "accept-language": "en",
+  });
+
   const response = await fetch(
-    `https://photon.komoot.io/api/?q=${encodeURIComponent(
-      query
-    )}&limit=8&lang=en&lat=${SEARCH_BIAS_LAT}&lon=${SEARCH_BIAS_LON}&zoom=13&location_bias_scale=0.6`,
+    `https://nominatim.openstreetmap.org/search?${params.toString()}`,
     {
       headers: {
         Accept: "application/json",
@@ -160,10 +260,97 @@ async function searchPhoton(query: string) {
   );
 
   if (!response.ok) {
-    throw new Error("Failed to search location.");
+    throw new Error("Nominatim search failed.");
   }
 
-  return (await response.json()) as PhotonResponse;
+  const data = (await response.json()) as NominatimItem[];
+
+  return data
+    .map((item) => {
+      const lat = Number.parseFloat(item.lat ?? "");
+      const lng = Number.parseFloat(item.lon ?? "");
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+      return {
+        source: "Nominatim" as const,
+        title: buildNominatimTitle(item),
+        subtitle: buildNominatimSubtitle(item) || item.display_name || "No address details",
+        lat,
+        lng,
+        importance: item.importance,
+      };
+    })
+    .filter(Boolean) as SearchResult[];
+}
+
+async function searchPhoton(query: string): Promise<SearchResult[]> {
+  const params = new URLSearchParams({
+    q: query,
+    limit: "8",
+    lang: "en",
+    lat: String(SEARCH_BIAS_LAT),
+    lon: String(SEARCH_BIAS_LON),
+    zoom: "13",
+    location_bias_scale: "0.7",
+  });
+
+  const response = await fetch(`https://photon.komoot.io/api/?${params.toString()}`, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Photon search failed.");
+  }
+
+  const data = (await response.json()) as PhotonResponse;
+  const features = Array.isArray(data.features) ? data.features : [];
+
+  return features
+    .map((feature) => {
+      const coords = feature.geometry?.coordinates;
+
+      if (
+        !Array.isArray(coords) ||
+        coords.length !== 2 ||
+        !Number.isFinite(coords[0]) ||
+        !Number.isFinite(coords[1])
+      ) {
+        return null;
+      }
+
+      const [lng, lat] = coords;
+      const props = feature.properties ?? {};
+
+      const title =
+        props.name ||
+        props.street ||
+        props.suburb ||
+        props.city ||
+        "Unnamed location";
+
+      const subtitle = [
+        props.street,
+        props.suburb,
+        props.city,
+        props.county,
+        props.state,
+        props.country,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+      return {
+        source: "Photon" as const,
+        title,
+        subtitle: subtitle || "No address details",
+        lat,
+        lng,
+      };
+    })
+    .filter(Boolean) as SearchResult[];
 }
 
 export default function OfficeMapPickerInner({
@@ -173,7 +360,7 @@ export default function OfficeMapPickerInner({
 }: Props) {
   const [searchText, setSearchText] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [results, setResults] = useState<PhotonFeature[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
 
   const lat = Number.parseFloat(latitude);
   const lng = Number.parseFloat(longitude);
@@ -186,6 +373,14 @@ export default function OfficeMapPickerInner({
 
   const markerPosition = hasCoords ? ([lat, lng] as [number, number]) : null;
 
+  const querySuggestions = useMemo(() => {
+    const query = searchText.trim();
+
+    if (!query) return [];
+
+    return Array.from(new Set(expandAcronyms(query))).slice(0, 4);
+  }, [searchText]);
+
   async function handleSearch() {
     const query = searchText.trim();
 
@@ -195,76 +390,51 @@ export default function OfficeMapPickerInner({
     }
 
     setIsSearching(true);
+    setResults([]);
 
     try {
-      const attempts = [
-        query,
-        `${query} office`,
-        `${query} branch`,
-        `${query} Isabela`,
-        `${query} Basilan`,
-      ];
+      const queries = Array.from(new Set(expandAcronyms(query))).slice(0, 3);
+      let collectedResults: SearchResult[] = [];
 
-      let validFeatures: PhotonFeature[] = [];
+      for (let index = 0; index < queries.length; index++) {
+        const attempt = queries[index];
 
-      for (const attempt of attempts) {
-        const data = await searchPhoton(attempt);
-        const features = Array.isArray(data.features) ? data.features : [];
-
-        validFeatures = features.filter((feature) => {
-          const coords = feature.geometry?.coordinates;
-
-          return (
-            Array.isArray(coords) &&
-            coords.length === 2 &&
-            Number.isFinite(coords[0]) &&
-            Number.isFinite(coords[1])
-          );
-        });
-
-        if (validFeatures.length > 0) {
-          validFeatures = validFeatures
-            .sort((a, b) => scoreFeature(b, query) - scoreFeature(a, query))
-            .slice(0, 5);
-
-          break;
+        if (index > 0) {
+          await delay(1100);
         }
+
+        const nominatimResults = await searchNominatim(attempt);
+        collectedResults = [...collectedResults, ...nominatimResults];
+
+        if (collectedResults.length >= 3) break;
       }
 
-      if (validFeatures.length === 0) {
-        setResults([]);
-        toast.error("Location not found. Try a more specific search.");
+      const photonResults = await searchPhoton(query);
+      collectedResults = [...collectedResults, ...photonResults];
+
+      const finalResults = dedupeResults(collectedResults)
+        .sort((a, b) => scoreResult(b, query) - scoreResult(a, query))
+        .slice(0, 8);
+
+      if (finalResults.length === 0) {
+        toast.error("Location not found. Try a more specific search or pin it manually.");
         return;
       }
 
-      setResults(validFeatures);
+      setResults(finalResults);
       toast.success("Search results found. Select the correct location.");
     } catch (error) {
-      setResults([]);
+      console.error(error);
       toast.error("Failed to search the map location.");
     } finally {
       setIsSearching(false);
     }
   }
 
-  function handleSelectResult(feature: PhotonFeature) {
-    const coords = feature.geometry?.coordinates;
-
-    if (!coords || coords.length !== 2) {
-      toast.error("Selected result has invalid coordinates.");
-      return;
-    }
-
-    const [selectedLng, selectedLat] = coords;
-
-    if (!Number.isFinite(selectedLat) || !Number.isFinite(selectedLng)) {
-      toast.error("Selected result has invalid coordinates.");
-      return;
-    }
-
+  function handleSelectResult(result: SearchResult) {
     onChange({
-      lat: Number(selectedLat.toFixed(6)),
-      lng: Number(selectedLng.toFixed(6)),
+      lat: Number(result.lat.toFixed(6)),
+      lng: Number(result.lng.toFixed(6)),
     });
 
     setResults([]);
@@ -286,7 +456,7 @@ export default function OfficeMapPickerInner({
                 handleSearch();
               }
             }}
-            placeholder="Search office, building, or landmark..."
+            placeholder="Search office, building, landmark, or agency..."
             className="w-full rounded-xl border border-border bg-background py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-primary"
           />
         </div>
@@ -302,35 +472,58 @@ export default function OfficeMapPickerInner({
         </button>
       </div>
 
+      {querySuggestions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {querySuggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => setSearchText(suggestion)}
+              className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground transition hover:bg-muted"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+
       {results.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-border bg-background">
           <div className="border-b border-border px-3 py-2 text-xs font-medium text-muted-foreground">
             Select the correct result
           </div>
 
-          <div className="max-h-64 overflow-y-auto">
-            {results.map((feature, index) => {
-              const { title, subtitle } = buildResultLabel(feature);
+          <div className="max-h-72 overflow-y-auto">
+            {results.map((result, index) => (
+              <button
+                key={`${result.source}-${result.title}-${result.lat}-${result.lng}-${index}`}
+                type="button"
+                onClick={() => handleSelectResult(result)}
+                className="flex w-full items-start gap-3 border-b border-border px-3 py-3 text-left transition hover:bg-muted/50 last:border-b-0"
+              >
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
 
-              return (
-                <button
-                  key={`${title}-${subtitle}-${index}`}
-                  type="button"
-                  onClick={() => handleSelectResult(feature)}
-                  className="flex w-full items-start gap-3 border-b border-border px-3 py-3 text-left transition hover:bg-muted/50 last:border-b-0"
-                >
-                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <div className="min-w-0">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-medium text-foreground">
-                      {title}
+                      {result.title}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {subtitle}
-                    </p>
+
+                    <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground">
+                      {result.source}
+                    </span>
                   </div>
-                </button>
-              );
-            })}
+
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {result.subtitle}
+                  </p>
+
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    {result.lat.toFixed(6)}, {result.lng.toFixed(6)}
+                  </p>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -347,6 +540,7 @@ export default function OfficeMapPickerInner({
         />
 
         <MapEvents onChange={onChange} />
+
         <FlyToLocation
           latitude={hasCoords ? lat : null}
           longitude={hasCoords ? lng : null}
@@ -356,11 +550,9 @@ export default function OfficeMapPickerInner({
       </MapContainer>
 
       <p className="text-xs text-muted-foreground">
-        Tip: Search by office name like{" "}
-        <span className="font-medium">SSS</span>,{" "}
-        <span className="font-medium">SSS Isabela</span>, or{" "}
-        <span className="font-medium">SSS Sumisip</span>, then choose the best
-        result or click directly on the map to pin the office.
+        Tip: If the office is not found, search a nearby landmark or click the
+        exact location on the map. Some offices exist in Google Maps but not yet
+        in OpenStreetMap search data.
       </p>
     </div>
   );
