@@ -7,12 +7,15 @@ import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { toast } from "sonner";
 import {
+  BriefcaseBusiness,
+  CalendarDays,
+  ClipboardCheck,
   ClipboardList,
+  FileSpreadsheet,
   LayoutDashboard,
   LogOut,
   UserCircle,
   Users,
-  FileSpreadsheet,
   X,
   ChevronRight,
 } from "lucide-react";
@@ -20,13 +23,11 @@ import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   { label: "Dashboard", href: "/teacher", icon: LayoutDashboard },
-  { label: "Students", href: "/teacher/students", icon: Users },
-  { label: "Assignments", href: "/teacher/assignments", icon: ClipboardList },
-  {
-    label: "Reports",
-    href: "/teacher/reports",
-    icon: FileSpreadsheet,
-  },
+  { label: "My Students", href: "/teacher/students", icon: Users },
+  { label: "Attendance Calendar", href: "/teacher/attendance", icon: CalendarDays },
+  { label: "Assignments", href: "/teacher/assignments", icon: BriefcaseBusiness },
+  { label: "Evaluations", href: "/teacher/evaluations", icon: ClipboardCheck },
+  { label: "Reports", href: "/teacher/reports", icon: FileSpreadsheet },
   { label: "Profile", href: "/teacher/profile", icon: UserCircle },
 ];
 
@@ -127,7 +128,8 @@ function SidebarContent({
         <div className="mb-3 rounded-2xl border border-border bg-background px-4 py-3">
           <p className="text-xs font-medium text-foreground">Teacher Session</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Monitor assigned students, assignments, and OJT progress.
+            Monitor students, attendance, logs, assignments, evaluations, and
+            reports.
           </p>
         </div>
 
@@ -157,6 +159,7 @@ export function TeacherSidebar({
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
+
     return () => {
       document.body.style.overflow = "";
     };
@@ -168,6 +171,7 @@ export function TeacherSidebar({
 
     try {
       const { error } = await supabase.auth.signOut();
+
       if (error) throw error;
 
       toast.success("Logged out successfully.", { id: toastId });
@@ -211,6 +215,7 @@ export function TeacherSidebar({
                     className="object-contain"
                   />
                 </div>
+
                 <div>
                   <p className="text-sm font-semibold tracking-tight">Nexora</p>
                   <p className="text-[11px] text-muted-foreground">
