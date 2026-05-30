@@ -86,6 +86,14 @@ type AssignmentData = {
   remarks: string | null;
 };
 
+type OfficeCapacityInfo = {
+  used: number;
+  capacity: number | null;
+  isUnlimited: boolean;
+  isFull: boolean;
+  label: string;
+};
+
 type AssignmentModalProps = {
   mode: "create" | "edit";
   students: StudentOption[];
@@ -93,6 +101,7 @@ type AssignmentModalProps = {
   offices: OfficeOption[];
   critics: CriticOption[];
   existingAssignments: ExistingAssignmentOption[];
+  officeCapacityMap: Record<string, OfficeCapacityInfo>;
   assignment?: AssignmentData | null;
 };
 
@@ -112,6 +121,13 @@ function fullName(person: {
     .join(" ");
 }
 
+function getOfficeCapacityTone(info?: OfficeCapacityInfo) {
+  if (!info) return "border-border bg-background text-muted-foreground";
+  if (info.isUnlimited) return "border-sky-500/20 bg-sky-500/10 text-sky-600";
+  if (info.isFull) return "border-rose-500/20 bg-rose-500/10 text-rose-600";
+  return "border-emerald-500/20 bg-emerald-500/10 text-emerald-600";
+}
+
 export function AssignmentModal({
   mode,
   students,
@@ -119,6 +135,7 @@ export function AssignmentModal({
   offices,
   critics,
   existingAssignments,
+  officeCapacityMap,
   assignment,
 }: AssignmentModalProps) {
   const router = useRouter();
@@ -136,6 +153,13 @@ export function AssignmentModal({
     () => students.find((student) => student.id === studentId) ?? null,
     [students, studentId]
   );
+
+  const selectedOffice = useMemo(
+    () => offices.find((office) => office.id === officeId) ?? null,
+    [offices, officeId]
+  );
+
+  const selectedOfficeCapacity = officeId ? officeCapacityMap[officeId] : null;
 
   const selectedOfficeCritics = useMemo(
     () =>
@@ -173,6 +197,15 @@ export function AssignmentModal({
 
     if (!isEdit && !nextStudentId) {
       return "Student is required.";
+    }
+
+    const nextStatus = String(formData.get("status") ?? status).trim();
+    const nextOfficeCapacity = officeCapacityMap[nextOfficeId];
+    const consumesCapacity = ["pending", "active"].includes(nextStatus);
+    const isSameOffice = isEdit && assignment?.office_id === nextOfficeId;
+
+    if (consumesCapacity && nextOfficeCapacity?.isFull && !isSameOffice) {
+      return `${nextOfficeCapacity.label}. Please choose another office.`;
     }
 
     if (!isEdit) {
@@ -346,13 +379,50 @@ export function AssignmentModal({
                 required
               >
                 <option value="">Select office</option>
-                {offices.map((office) => (
-                  <option key={office.id} value={office.id}>
-                    {office.name}
-                  </option>
-                ))}
+                {offices.map((office) => {
+                  const capacityInfo = officeCapacityMap[office.id];
+                  const isCurrentOffice = isEdit && assignment?.office_id === office.id;
+                  const shouldDisable = capacityInfo?.isFull && !isCurrentOffice;
+
+                  return (
+                    <option
+                      key={office.id}
+                      value={office.id}
+                      disabled={shouldDisable}
+                    >
+                      {capacityInfo?.label ?? office.name}
+                    </option>
+                  );
+                })}
               </select>
             </Field>
+
+            {officeId && selectedOfficeCapacity && (
+              <div
+                className={`rounded-2xl border p-4 ${getOfficeCapacityTone(
+                  selectedOfficeCapacity
+                )}`}
+              >
+                <div className="flex items-start gap-3">
+                  <Building2 className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {selectedOffice?.name ?? "Selected office"}
+                    </p>
+                    <p className="mt-1 text-sm font-medium">
+                      {selectedOfficeCapacity.isUnlimited
+                        ? "Unlimited capacity"
+                        : selectedOfficeCapacity.isFull
+                        ? `Full (${selectedOfficeCapacity.used}/${selectedOfficeCapacity.capacity})`
+                        : `${selectedOfficeCapacity.used}/${selectedOfficeCapacity.capacity} used`}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Pending and active assignments count against office capacity.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {officeId && (
               <div className="rounded-2xl border border-border bg-background/60 p-4">
