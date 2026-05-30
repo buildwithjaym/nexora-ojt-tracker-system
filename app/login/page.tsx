@@ -31,20 +31,20 @@ export default function LoginPage() {
       }));
     };
 
-  const getRedirectPath = (role: ProfileRole) => {
-    switch (role) {
-      case "admin":
-        return "/admin";
-      case "teacher":
-        return "/teacher";
-      case "student":
-        return "/student";
-      case "critic":
-        return"/critic";
-      default:
-        return "/";
-    }
-  };
+  const getRedirectPath = (role: string) => {
+  switch (role) {
+    case "admin":
+      return "/admin";
+    case "teacher":
+      return "/teacher";
+    case "student":
+      return "/student";
+    case "critic":
+      return "/critic";
+    default:
+      return "/login";
+  }
+};
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
