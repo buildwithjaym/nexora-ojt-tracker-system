@@ -1568,3 +1568,86 @@ on public.critics
 for select
 to authenticated
 using (profile_id = auth.uid());
+
+
+alter table public.assignments enable row level security;
+
+drop policy if exists "Critics can view assignments in own office" on public.assignments;
+
+create policy "Critics can view assignments in own office"
+on public.assignments
+for select
+to authenticated
+using (
+  status = any (array['active'::text, 'completed'::text])
+  and exists (
+    select 1
+    from public.critics c
+    where c.profile_id = auth.uid()
+      and c.status = 'active'
+      and c.office_id = assignments.office_id
+  )
+);
+
+alter table public.students enable row level security;
+
+drop policy if exists "Critics can view students assigned to own office" on public.students;
+
+create policy "Critics can view students assigned to own office"
+on public.students
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.assignments a
+    join public.critics c on c.office_id = a.office_id
+    where a.student_id = students.id
+      and a.status = any (array['active'::text, 'completed'::text])
+      and c.profile_id = auth.uid()
+      and c.status = 'active'
+  )
+);
+
+
+
+alter table public.offices enable row level security;
+
+drop policy if exists "Critics can view own office" on public.offices;
+
+create policy "Critics can view own office"
+on public.offices
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.critics c
+    where c.profile_id = auth.uid()
+      and c.status = 'active'
+      and c.office_id = offices.id
+  )
+);
+
+
+
+alter table public.batches enable row level security;
+
+drop policy if exists "Critics can view batches of assigned students" on public.batches;
+
+create policy "Critics can view batches of assigned students"
+on public.batches
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.students s
+    join public.assignments a on a.student_id = s.id
+    join public.critics c on c.office_id = a.office_id
+    where s.batch_id = batches.id
+      and a.status = any (array['active'::text, 'completed'::text])
+      and c.profile_id = auth.uid()
+      and c.status = 'active'
+  )
+);
