@@ -13,8 +13,10 @@ import {
   Clock3,
   AlertTriangle,
   CheckCircle2,
+  MessageSquareWarning,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import AnimatedNumber from "@/components/admin/animated-number";
 
 type BatchInfo = {
   id?: string;
@@ -103,6 +105,7 @@ export default async function AdminDashboardPage() {
     officesCountRes,
     batchesCountRes,
     assignmentsCountRes,
+    criticsCountRes,
     studentsRes,
     teachersRes,
     batchesRes,
@@ -114,6 +117,7 @@ export default async function AdminDashboardPage() {
     supabase.from("offices").select("id", { count: "exact", head: true }),
     supabase.from("batches").select("id", { count: "exact", head: true }),
     supabase.from("assignments").select("id", { count: "exact", head: true }),
+    supabase.from("critics").select("id", { count: "exact", head: true }),
 
     supabase.from("students").select(`
       id,
@@ -185,6 +189,7 @@ export default async function AdminDashboardPage() {
   const totalOffices = officesCountRes.count ?? 0;
   const totalBatches = batchesCountRes.count ?? 0;
   const totalAssignments = assignmentsCountRes.count ?? 0;
+  const totalCritics = criticsCountRes.count ?? 0;
 
   const students = studentsRes.data ?? [];
   const teachers = teachersRes.data ?? [];
@@ -205,7 +210,9 @@ export default async function AdminDashboardPage() {
       const requiredHours = Number(student.required_hours ?? 0);
       const completedHours = Number(student.completed_hours ?? 0);
       const progress =
-        requiredHours > 0 ? Math.round((completedHours / requiredHours) * 100) : 0;
+        requiredHours > 0
+          ? Math.round((completedHours / requiredHours) * 100)
+          : 0;
 
       const computedStatus = getStudentProgressStatus(progress);
       const batch = normalizeBatch(student.batches);
@@ -271,7 +278,9 @@ export default async function AdminDashboardPage() {
       const requiredHours = Number(student.required_hours ?? 0);
       const completedHours = Number(student.completed_hours ?? 0);
       const progress =
-        requiredHours > 0 ? Math.round((completedHours / requiredHours) * 100) : 0;
+        requiredHours > 0
+          ? Math.round((completedHours / requiredHours) * 100)
+          : 0;
       const remaining = Math.max(requiredHours - completedHours, 0);
       const progressStatus = getStudentProgressStatus(progress);
 
@@ -392,6 +401,7 @@ export default async function AdminDashboardPage() {
       title: "Students",
       value: totalStudents,
       note: "Total student records",
+      href: "/admin/students",
       icon: Users,
       accent: "from-blue-500/15 to-cyan-500/10 text-blue-400 ring-blue-500/20",
     },
@@ -399,6 +409,7 @@ export default async function AdminDashboardPage() {
       title: "Teachers",
       value: totalTeachers,
       note: `${teacherActiveCount} active supervisors`,
+      href: "/admin/teachers",
       icon: GraduationCap,
       accent:
         "from-emerald-500/15 to-lime-500/10 text-emerald-400 ring-emerald-500/20",
@@ -407,6 +418,7 @@ export default async function AdminDashboardPage() {
       title: "Offices",
       value: totalOffices,
       note: "Partner offices for student placement",
+      href: "/admin/offices",
       icon: Building2,
       accent:
         "from-orange-500/15 to-yellow-500/10 text-orange-400 ring-orange-500/20",
@@ -415,6 +427,7 @@ export default async function AdminDashboardPage() {
       title: "Batches",
       value: totalBatches,
       note: `${activeBatchesCount} active batches`,
+      href: "/admin/batches",
       icon: Layers3,
       accent:
         "from-fuchsia-500/15 to-pink-500/10 text-fuchsia-400 ring-fuchsia-500/20",
@@ -423,9 +436,19 @@ export default async function AdminDashboardPage() {
       title: "Assignments",
       value: totalAssignments,
       note: "Placement and endorsement records",
+      href: "/admin/assignments",
       icon: ClipboardList,
       accent:
         "from-violet-500/15 to-indigo-500/10 text-violet-400 ring-violet-500/20",
+    },
+    {
+      title: "Critics",
+      value: totalCritics,
+      note: "Critic accounts and review access",
+      href: "/admin/critic",
+      icon: MessageSquareWarning,
+      accent:
+        "from-rose-500/15 to-orange-500/10 text-rose-400 ring-rose-500/20",
     },
   ];
 
@@ -444,13 +467,12 @@ export default async function AdminDashboardPage() {
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
-              Monitor OJT progress, student readiness, partner offices, and recent
-              assignments in one place. Built for faster decisions and better
-              administrative visibility.
+              Monitor OJT progress, student readiness, partner offices, critic
+              access, and recent assignments in one responsive admin workspace.
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 xl:w-[540px]">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:w-[720px]">
             <Link
               href="/admin/students"
               className="rounded-2xl border border-border bg-background/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-secondary hover:shadow-sm"
@@ -483,22 +505,34 @@ export default async function AdminDashboardPage() {
                 Open module <ArrowRight className="h-3.5 w-3.5" />
               </p>
             </Link>
+
+            <Link
+              href="/admin/critic"
+              className="rounded-2xl border border-border bg-background/70 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-secondary hover:shadow-sm"
+            >
+              <p className="text-xs text-muted-foreground">Manage</p>
+              <p className="mt-1 font-medium">Critics</p>
+              <p className="mt-2 inline-flex items-center gap-1 text-xs text-primary">
+                Open module <ArrowRight className="h-3.5 w-3.5" />
+              </p>
+            </Link>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
         {topStats.map((stat) => {
           const Icon = stat.icon;
 
           return (
-            <div
+            <Link
+              href={stat.href}
               key={stat.title}
               className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/20 hover:shadow-md sm:p-5"
             >
               <div className="flex items-start justify-between gap-3">
                 <div
-                  className={`rounded-2xl bg-gradient-to-br p-3 ring-1 transition-transform duration-300 hover:scale-105 ${stat.accent}`}
+                  className={`rounded-2xl bg-gradient-to-br p-3 ring-1 transition-transform duration-300 group-hover:scale-105 ${stat.accent}`}
                 >
                   <Icon className="h-5 w-5" />
                 </div>
@@ -510,18 +544,20 @@ export default async function AdminDashboardPage() {
               </div>
 
               <p className="mt-4 text-sm text-muted-foreground">{stat.title}</p>
+
               <p className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-                {stat.value}
+                <AnimatedNumber value={Number(stat.value) || 0} />
               </p>
+
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
                 {stat.note}
               </p>
-            </div>
+            </Link>
           );
         })}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {topInsights.map((item) => {
           const Icon = item.icon;
 
@@ -538,7 +574,9 @@ export default async function AdminDashboardPage() {
                   </p>
                 </div>
 
-                <div className={`rounded-xl p-3 ring-1 transition-transform duration-300 hover:scale-105 ${item.accent}`}>
+                <div
+                  className={`rounded-xl p-3 ring-1 transition-transform duration-300 hover:scale-105 ${item.accent}`}
+                >
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
@@ -551,14 +589,16 @@ export default async function AdminDashboardPage() {
         })}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-muted-foreground">
                 Operational Progress Chart
               </p>
-              <h3 className="text-lg font-semibold">Student Progress Distribution</h3>
+              <h3 className="text-lg font-semibold">
+                Student Progress Distribution
+              </h3>
             </div>
 
             <Link
@@ -607,7 +647,7 @@ export default async function AdminDashboardPage() {
             ))}
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-border bg-background p-4 transition-all duration-300 hover:border-primary/20">
               <p className="text-xs text-muted-foreground">
                 Students with Remaining Hours
@@ -636,7 +676,9 @@ export default async function AdminDashboardPage() {
 
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
           <div className="mb-5">
-            <p className="text-sm text-muted-foreground">Enrollment Analytics</p>
+            <p className="text-sm text-muted-foreground">
+              Enrollment Analytics
+            </p>
             <h3 className="text-lg font-semibold">Course Distribution</h3>
           </div>
 
@@ -646,7 +688,8 @@ export default async function AdminDashboardPage() {
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium">{item.course}</p>
                   <p className="text-xs text-muted-foreground">
-                    {item.count} student{item.count === 1 ? "" : "s"} • {item.percent}%
+                    {item.count} student{item.count === 1 ? "" : "s"} •{" "}
+                    {item.percent}%
                   </p>
                 </div>
 
@@ -666,7 +709,7 @@ export default async function AdminDashboardPage() {
             )}
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-border bg-background p-4 transition-all duration-300 hover:border-primary/20">
               <p className="text-2xl font-bold">{activeBatchesCount}</p>
               <p className="text-xs text-muted-foreground">Active batches</p>
@@ -685,12 +728,16 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
           <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Students Near Completion</p>
-              <h3 className="text-lg font-semibold">Priority Monitoring List</h3>
+              <p className="text-sm text-muted-foreground">
+                Students Near Completion
+              </p>
+              <h3 className="text-lg font-semibold">
+                Priority Monitoring List
+              </h3>
             </div>
 
             <Link
@@ -748,7 +795,9 @@ export default async function AdminDashboardPage() {
                 </div>
 
                 <div className="mt-4 flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium">{student.remaining} hrs left</p>
+                  <p className="text-sm font-medium">
+                    {student.remaining} hrs left
+                  </p>
                   <span
                     className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getStatusBadgeClasses(
                       student.progressStatus
@@ -782,7 +831,10 @@ export default async function AdminDashboardPage() {
 
               <tbody className="divide-y divide-border">
                 {nearCompletionStudents.map((student) => (
-                  <tr key={student.id} className="transition-colors hover:bg-muted/25">
+                  <tr
+                    key={student.id}
+                    className="transition-colors hover:bg-muted/25"
+                  >
                     <td className="py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
@@ -790,9 +842,12 @@ export default async function AdminDashboardPage() {
                         </div>
 
                         <div>
-                          <p className="text-sm font-medium">{student.fullName}</p>
+                          <p className="text-sm font-medium">
+                            {student.fullName}
+                          </p>
                           <p className="text-xs text-muted-foreground">
-                            {student.completedHours} / {student.requiredHours} hrs
+                            {student.completedHours} / {student.requiredHours}{" "}
+                            hrs
                           </p>
                         </div>
                       </div>
@@ -810,7 +865,9 @@ export default async function AdminDashboardPage() {
                       <div className="min-w-[180px]">
                         <div className="mb-2 flex items-center justify-between text-xs">
                           <span className="text-muted-foreground">Progress</span>
-                          <span className="font-medium">{student.progress}%</span>
+                          <span className="font-medium">
+                            {student.progress}%
+                          </span>
                         </div>
 
                         <div className="h-2.5 overflow-hidden rounded-full bg-secondary">
@@ -864,8 +921,12 @@ export default async function AdminDashboardPage() {
         <div className="space-y-6">
           <div className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md sm:p-5">
             <div className="mb-4">
-              <p className="text-sm text-muted-foreground">Assignment Snapshot</p>
-              <h3 className="text-lg font-semibold">Recent Assignment Status</h3>
+              <p className="text-sm text-muted-foreground">
+                Assignment Snapshot
+              </p>
+              <h3 className="text-lg font-semibold">
+                Recent Assignment Status
+              </h3>
             </div>
 
             <div className="space-y-3">
@@ -892,7 +953,8 @@ export default async function AdminDashboardPage() {
                           ? "bg-emerald-400"
                           : item.status === "pending"
                           ? "bg-amber-400"
-                          : item.status === "rejected" || item.status === "inactive"
+                          : item.status === "rejected" ||
+                            item.status === "inactive"
                           ? "bg-rose-400"
                           : "bg-primary"
                       }`}
@@ -994,14 +1056,26 @@ export default async function AdminDashboardPage() {
             <div className="space-y-3 text-sm">
               <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-amber-300">
                 {pendingOrAttentionCount > 0
-                  ? `${pendingOrAttentionCount} student${pendingOrAttentionCount === 1 ? "" : "s"} need closer monitoring due to low progress.`
+                  ? `${pendingOrAttentionCount} student${
+                      pendingOrAttentionCount === 1 ? "" : "s"
+                    } need closer monitoring due to low progress.`
                   : "No students are currently flagged for low progress."}
               </div>
 
               <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4 text-blue-300">
                 {nearCompletionStudents.length > 0
-                  ? `${nearCompletionStudents.length} student${nearCompletionStudents.length === 1 ? "" : "s"} are close to completion and may be ready for final evaluation soon.`
+                  ? `${nearCompletionStudents.length} student${
+                      nearCompletionStudents.length === 1 ? "" : "s"
+                    } are close to completion and may be ready for final evaluation soon.`
                   : "No students are currently close to final completion."}
+              </div>
+
+              <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-rose-300">
+                {totalCritics > 0
+                  ? `${totalCritics} critic record${
+                      totalCritics === 1 ? "" : "s"
+                    } are available in the Critic module.`
+                  : "No critic records are available yet."}
               </div>
 
               <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-300">
