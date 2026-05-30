@@ -25,6 +25,7 @@ type AssignmentsPageProps = {
 };
 
 const PAGE_SIZE = 10;
+const CAPACITY_STATUSES = ["pending", "active"];
 
 function fullName(person: any) {
   return [
@@ -40,6 +41,42 @@ function fullName(person: any) {
 function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return value ?? null;
+}
+
+type OfficeCapacityInfo = {
+  used: number;
+  capacity: number | null;
+  isUnlimited: boolean;
+  isFull: boolean;
+  label: string;
+};
+
+function buildOfficeCapacityMap(offices: any[], assignments: any[]) {
+  return offices.reduce<Record<string, OfficeCapacityInfo>>((acc, office) => {
+    const used = assignments.filter(
+      (assignment) =>
+        assignment.office_id === office.id &&
+        CAPACITY_STATUSES.includes(assignment.status)
+    ).length;
+
+    const capacity = office.capacity ?? null;
+    const isUnlimited = capacity === null;
+    const isFull = !isUnlimited && used >= capacity;
+
+    acc[office.id] = {
+      used,
+      capacity,
+      isUnlimited,
+      isFull,
+      label: isUnlimited
+        ? `${office.name} - Unlimited`
+        : isFull
+        ? `${office.name} - Full (${used}/${capacity})`
+        : `${office.name} - ${used}/${capacity} used`,
+    };
+
+    return acc;
+  }, {});
 }
 
 export default async function AssignmentsPage({
@@ -149,6 +186,7 @@ export default async function AssignmentsPage({
   const offices = officesRes.data ?? [];
   const critics = criticsRes.data ?? [];
   const existingAssignments = existingAssignmentsRes.data ?? [];
+  const officeCapacityMap = buildOfficeCapacityMap(offices, existingAssignments);
 
   let countQuery = supabase
     .from("assignments")
@@ -192,7 +230,8 @@ export default async function AssignmentsPage({
       ),
       offices:office_id (
         id,
-        name
+        name,
+        capacity
       )
     `,
       { count: "exact" }
@@ -310,12 +349,8 @@ export default async function AssignmentsPage({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm text-muted-foreground">
-            Assignment Management
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Assignments
-          </h1>
+          <p className="text-sm text-muted-foreground">Assignment Management</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Assignments</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Admin assigns the student once. Required hours are locked and loaded
             automatically from the database.
@@ -417,9 +452,26 @@ export default async function AssignmentsPage({
                       <span>{teacher ? fullName(teacher) : "-"}</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Building2 className="h-4 w-4 shrink-0" />
                       <span>{office?.name ?? "-"}</span>
+                      {officeCapacityMap[assignment.office_id] && (
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                            officeCapacityMap[assignment.office_id].isUnlimited
+                              ? "bg-sky-500/10 text-sky-600"
+                              : officeCapacityMap[assignment.office_id].isFull
+                              ? "bg-rose-500/10 text-rose-600"
+                              : "bg-emerald-500/10 text-emerald-600"
+                          }`}
+                        >
+                          {officeCapacityMap[assignment.office_id].isUnlimited
+                            ? "Unlimited"
+                            : officeCapacityMap[assignment.office_id].isFull
+                            ? `Full (${officeCapacityMap[assignment.office_id].used}/${officeCapacityMap[assignment.office_id].capacity})`
+                            : `${officeCapacityMap[assignment.office_id].used}/${officeCapacityMap[assignment.office_id].capacity} used`}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -427,9 +479,7 @@ export default async function AssignmentsPage({
                       <span>
                         Critic:{" "}
                         {officeCritics.length > 0
-                          ? officeCritics
-                              .map((critic: any) => fullName(critic))
-                              .join(", ")
+                          ? officeCritics.map((critic: any) => fullName(critic)).join(", ")
                           : "No critic assigned"}
                       </span>
                     </div>
@@ -544,6 +594,7 @@ export default async function AssignmentsPage({
           offices={offices}
           critics={critics}
           existingAssignments={existingAssignments}
+          officeCapacityMap={officeCapacityMap}
         />
       )}
 
@@ -555,6 +606,7 @@ export default async function AssignmentsPage({
           offices={offices}
           critics={critics}
           existingAssignments={existingAssignments}
+          officeCapacityMap={officeCapacityMap}
           assignment={editAssignmentRes.data}
         />
       )}
