@@ -101,7 +101,7 @@ export default function LoginPage() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name, role, is_active")
+        .select("full_name, role, is_active, must_change_password")
         .eq("id", authData.user.id)
         .single();
 
@@ -124,6 +124,12 @@ export default function LoginPage() {
         });
         await supabase.auth.signOut();
         setIsSubmitting(false);
+        return;
+      }
+      
+      //I add a validation if the table is true direct it here
+      if (profile.must_change_password) {
+          router.replace("/change-password");
         return;
       }
 
