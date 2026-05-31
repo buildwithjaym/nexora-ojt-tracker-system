@@ -1651,3 +1651,93 @@ using (
       and c.status = 'active'
   )
 );
+
+-- Remove only the student evaluation policies we added
+drop policy if exists "Students can view own student record" on public.students;
+drop policy if exists "Students can view own evaluations" on public.evaluations;
+drop policy if exists "Students can view their evaluation critic" on public.critics;
+drop policy if exists "Students can view their evaluator profile" on public.profiles;
+
+
+-- Helper: get logged-in student's id
+create or replace function public.current_student_id()
+returns uuid
+language sql
+security definer
+set search_path = public
+as $$
+  select s.id
+  from public.students s
+  where s.profile_id = auth.uid()
+  limit 1
+$$;
+
+-- Helper: check if critic belongs to student's evaluation
+create or replace function public.is_my_evaluation_critic(target_critic_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.evaluations e
+    where e.student_id = public.current_student_id()
+      and e.critic_id = target_critic_id
+  )
+$$;
+
+-- Helper: check if profile belongs to student's evaluator
+create or replace function public.is_my_evaluator_profile(target_profile_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.evaluations e
+    join public.critics c on c.id = e.critic_id
+    where e.student_id = public.current_student_id()
+      and c.profile_id = target_profile_id
+  )
+$$;
+
+
+
+-- Student can read own student row
+create policy "Students can view own student record"
+on public.students
+for select
+to authenticated
+using (
+  profile_id = auth.uid()
+);
+
+-- Student can read own evaluation
+create policy "Students can view own evaluations"
+on public.evaluations
+for select
+to authenticated
+using (
+  student_id = public.current_student_id()
+);
+
+-- Student can read assigned critic
+create policy "Students can view assigned critic"
+on public.critics
+for select
+to authenticated
+using (
+  public.is_my_evaluation_critic(id)
+);
+
+-- Student can read evaluator avatar/profile
+create policy "Students can view evaluator profile"
+on public.profiles
+for select
+to authenticated
+using (
+  id = auth.uid()
+  or public.is_my_evaluator_profile(id)
+);
