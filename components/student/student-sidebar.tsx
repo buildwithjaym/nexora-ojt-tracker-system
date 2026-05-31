@@ -12,6 +12,7 @@ import {
   CalendarDays,
   FileSpreadsheet,
   UserCircle,
+  ClipboardCheck,
   LogOut,
   X,
   ChevronRight,
@@ -23,6 +24,7 @@ const navItems = [
   { label: "Attendance", href: "/student/attendance", icon: Clock3 },
   { label: "Calendar", href: "/student/calendar", icon: CalendarDays },
   { label: "Reports", href: "/student/reports", icon: FileSpreadsheet },
+  { label: "My Evaluations", href: "/student/evaluations", icon: ClipboardCheck },
   { label: "Profile", href: "/student/profile", icon: UserCircle },
 ];
 
