@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState, useTransition } from "react";
+import { FormEvent, ReactNode, useMemo, useState, useTransition } from "react";
 import { Edit, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { createCritic, updateCritic } from "@/app/admin/critics/actions";
@@ -56,7 +56,7 @@ export function CriticModal({ mode, offices, critic }: CriticModalProps) {
             setCredentials(null);
             setOpen(true);
           }}
-          className="inline-flex h-12 items-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 sm:w-auto"
         >
           <Plus className="h-5 w-5" />
           Add Critic
@@ -73,6 +73,7 @@ export function CriticModal({ mode, offices, critic }: CriticModalProps) {
         }}
         className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-background text-muted-foreground transition hover:bg-muted hover:text-foreground"
         title="Edit critic"
+        aria-label="Edit critic"
       >
         <Edit className="h-4 w-4" />
       </button>
@@ -153,11 +154,13 @@ export function CriticModal({ mode, offices, critic }: CriticModalProps) {
       {triggerButton}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-3xl overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
-            <div className="flex items-start justify-between border-b border-border px-6 py-5">
-              <div>
-                <h2 className="text-xl font-bold text-foreground">{title}</h2>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-2 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-border bg-card shadow-2xl sm:max-h-[calc(100dvh-2rem)] sm:rounded-3xl">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-4 py-4 sm:px-6 sm:py-5">
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-foreground sm:text-xl">
+                  {title}
+                </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {description}
                 </p>
@@ -166,140 +169,153 @@ export function CriticModal({ mode, offices, critic }: CriticModalProps) {
               <button
                 type="button"
                 onClick={closeModal}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-background transition hover:bg-muted"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-background transition hover:bg-muted"
+                aria-label="Close modal"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5 px-6 py-6">
-              {credentials && (
-                <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-4 text-sm">
-                  <p className="font-semibold text-green-600">
-                    Critic account created.
-                  </p>
-                  <p className="mt-1 text-foreground">
-                    Email: <span className="font-semibold">{credentials.email}</span>
-                  </p>
-                  <p className="text-foreground">
-                    Temporary Password:{" "}
-                    <span className="font-semibold">{credentials.password}</span>
-                  </p>
+            <form
+              onSubmit={handleSubmit}
+              className="flex min-h-0 flex-1 flex-col"
+            >
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+                {credentials && (
+                  <div className="rounded-2xl border border-green-500/30 bg-green-500/10 p-4 text-sm">
+                    <p className="font-semibold text-green-600">
+                      Critic account created.
+                    </p>
+                    <p className="mt-1 break-all text-foreground">
+                      Email:{" "}
+                      <span className="font-semibold">
+                        {credentials.email}
+                      </span>
+                    </p>
+                    <p className="break-all text-foreground">
+                      Temporary Password:{" "}
+                      <span className="font-semibold">
+                        {credentials.password}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
+                {!hasOffices && (
+                  <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-600">
+                    No offices found. Please add an office first before creating
+                    a critic.
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="First Name" required>
+                    <input
+                      name="first_name"
+                      required
+                      defaultValue={critic?.first_name ?? ""}
+                      className="input-style"
+                    />
+                  </Field>
+
+                  <Field label="Middle Name">
+                    <input
+                      name="middle_name"
+                      defaultValue={critic?.middle_name ?? ""}
+                      className="input-style"
+                    />
+                  </Field>
+
+                  <Field label="Last Name" required>
+                    <input
+                      name="last_name"
+                      required
+                      defaultValue={critic?.last_name ?? ""}
+                      className="input-style"
+                    />
+                  </Field>
+
+                  <Field label="Suffix">
+                    <input
+                      name="suffix"
+                      defaultValue={critic?.suffix ?? ""}
+                      className="input-style"
+                    />
+                  </Field>
+
+                  <Field label="Email" required>
+                    <input
+                      name="email"
+                      type="email"
+                      required
+                      defaultValue={critic?.email ?? ""}
+                      placeholder="example@email.com"
+                      className="input-style"
+                    />
+                  </Field>
+
+                  <Field label="Phone Number">
+                    <input
+                      name="phone"
+                      inputMode="numeric"
+                      maxLength={11}
+                      defaultValue={critic?.phone ?? ""}
+                      placeholder="09XXXXXXXXX"
+                      className="input-style"
+                      onInput={(e) => {
+                        e.currentTarget.value =
+                          e.currentTarget.value.replace(/\D/g, "");
+                      }}
+                    />
+                  </Field>
+
+                  <Field label="Position">
+                    <input
+                      name="position"
+                      defaultValue={critic?.position ?? ""}
+                      placeholder="Office Supervisor"
+                      className="input-style"
+                    />
+                  </Field>
+
+                  <Field label="Office" required>
+                    <select
+                      name="office_id"
+                      required
+                      defaultValue={critic?.office_id ?? ""}
+                      disabled={!hasOffices}
+                      className="input-style disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <option value="">Select office</option>
+                      {offices.map((office) => (
+                        <option key={office.id} value={office.id}>
+                          {office.name}
+                          {office.status && office.status !== "active"
+                            ? ` (${office.status})`
+                            : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <Field label="Status">
+                    <select
+                      name="status"
+                      defaultValue={critic?.status ?? "active"}
+                      className="input-style"
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </Field>
                 </div>
-              )}
-
-              {!hasOffices && (
-                <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-600">
-                  No offices found. Please add an office first before creating a critic.
-                </div>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="First Name" required>
-                  <input
-                    name="first_name"
-                    required
-                    defaultValue={critic?.first_name ?? ""}
-                    className="input-style"
-                  />
-                </Field>
-
-                <Field label="Middle Name">
-                  <input
-                    name="middle_name"
-                    defaultValue={critic?.middle_name ?? ""}
-                    className="input-style"
-                  />
-                </Field>
-
-                <Field label="Last Name" required>
-                  <input
-                    name="last_name"
-                    required
-                    defaultValue={critic?.last_name ?? ""}
-                    className="input-style"
-                  />
-                </Field>
-
-                <Field label="Suffix">
-                  <input
-                    name="suffix"
-                    defaultValue={critic?.suffix ?? ""}
-                    className="input-style"
-                  />
-                </Field>
-
-                <Field label="Email" required>
-                  <input
-                    name="email"
-                    type="email"
-                    required
-                    defaultValue={critic?.email ?? ""}
-                    placeholder="example@email.com"
-                    className="input-style"
-                  />
-                </Field>
-
-                <Field label="Phone Number">
-                  <input
-                    name="phone"
-                    inputMode="numeric"
-                    maxLength={11}
-                    defaultValue={critic?.phone ?? ""}
-                    placeholder="09XXXXXXXXX"
-                    className="input-style"
-                    onInput={(e) => {
-                      e.currentTarget.value = e.currentTarget.value.replace(/\D/g, "");
-                    }}
-                  />
-                </Field>
-
-                <Field label="Position">
-                  <input
-                    name="position"
-                    defaultValue={critic?.position ?? ""}
-                    placeholder="Office Supervisor"
-                    className="input-style"
-                  />
-                </Field>
-
-                <Field label="Office" required>
-                  <select
-                    name="office_id"
-                    required
-                    defaultValue={critic?.office_id ?? ""}
-                    disabled={!hasOffices}
-                    className="input-style disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <option value="">Select office</option>
-                    {offices.map((office) => (
-                      <option key={office.id} value={office.id}>
-                        {office.name}
-                        {office.status && office.status !== "active"
-                          ? ` (${office.status})`
-                          : ""}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
-                <Field label="Status">
-                  <select
-                    name="status"
-                    defaultValue={critic?.status ?? "active"}
-                    className="input-style"
-                  >
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </Field>
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-border pt-5">
+              <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-border px-4 py-4 sm:flex-row sm:justify-end sm:px-6 sm:py-5">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="rounded-2xl border border-border bg-background px-5 py-2.5 text-sm font-semibold transition hover:bg-muted"
+                  className="h-11 w-full rounded-2xl border border-border bg-background px-5 text-sm font-semibold transition hover:bg-muted sm:w-auto"
                 >
                   Cancel
                 </button>
@@ -307,7 +323,7 @@ export function CriticModal({ mode, offices, critic }: CriticModalProps) {
                 <button
                   type="submit"
                   disabled={isPending || !hasOffices}
-                  className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="h-11 w-full rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 >
                   {isPending
                     ? isEdit
@@ -329,7 +345,7 @@ export function CriticModal({ mode, offices, critic }: CriticModalProps) {
               border: 1px solid hsl(var(--border));
               background: hsl(var(--background));
               padding: 0 1rem;
-              font-size: 0.875rem;
+              font-size: 16px;
               outline: none;
               transition: border-color 0.2s ease;
             }
@@ -351,7 +367,7 @@ function Field({
 }: {
   label: string;
   required?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <label className="space-y-1.5">
