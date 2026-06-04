@@ -307,7 +307,7 @@ Thank you.`);
             <div className="min-w-0">
               <p className="truncate text-sm font-bold sm:text-base">Nexora</p>
               <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
-                OJT Monitoring Platform
+                Your Trusted OJT Tracking System for Schools and Institutions
               </p>
             </div>
           </Link>
@@ -695,8 +695,9 @@ Thank you.`);
       </section>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 transition hover:text-foreground">
           <p>© {new Date().getFullYear()} Nexora. OJT Monitoring Platform.</p>
+          <p>Developer: Jaymar H. Maruji</p>
           <p>Centralized attendance. Clear evaluations. Better monitoring.</p>
         </div>
       </footer>
