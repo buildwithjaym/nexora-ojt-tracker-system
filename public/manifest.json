@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Nexora - Your Trusted OJT Tracking System for Schools and Institutions",
   "short_name": "Nexora",
-  "description": "A smart OJT (On-the-Job Training) management platform designed to simplify and secure internship tracking for students, critic, teachers, and institutions.",
+  "description": "A smart OJT (On-the-Job Training) management platform for students, critics, teachers, and institutions.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -25,7 +25,6 @@
     }
   ],
   "screenshots": [
-    
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",

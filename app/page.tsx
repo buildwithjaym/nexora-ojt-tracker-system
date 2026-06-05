@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
@@ -32,20 +32,71 @@ const fadeUp = {
   transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const },
 };
 
+const navLinks = [
+  { id: "problem", label: "Problem", href: "#problem" },
+  { id: "solution", label: "4 Roles", href: "#solution" },
+  { id: "benefits", label: "Benefits", href: "#benefits" },
+  { id: "faq", label: "FAQ", href: "#faq" },
+];
+
+const heroProofs = [
+  {
+    id: "role-based-portals",
+    label: "4 role-based portals",
+  },
+  {
+    id: "critic-evaluation",
+    label: "Digital critic evaluation",
+  },
+  {
+    id: "report-visibility",
+    label: "Progress and report visibility",
+  },
+];
+
+const dashboardStats = [
+  { id: "students", label: "Students", value: "248" },
+  { id: "assignments", label: "Assignments", value: "196" },
+  { id: "partner-offices", label: "Partner Offices", value: "32" },
+  { id: "evaluations", label: "Evaluations", value: "87" },
+];
+
+const attentionItems = [
+  {
+    id: "below-progress",
+    label: "Students below expected progress",
+    value: "18",
+  },
+  {
+    id: "pending-evaluations",
+    label: "Pending critic evaluations",
+    value: "24",
+  },
+  {
+    id: "without-placement",
+    label: "Students without placement",
+    value: "7",
+  },
+];
+
 const painPoints = [
   {
+    id: "scattered-records",
     title: "Records are scattered everywhere",
     text: "Attendance is on paper, updates are in Messenger, files are in Excel, and evaluation forms come from different channels. The result: coordinators spend more time chasing records than supervising students.",
   },
   {
+    id: "late-problems",
     title: "Problems are discovered too late",
     text: "A student may already be behind in hours, missing attendance, or waiting for evaluation before the school notices. Nexora helps surface these issues earlier.",
   },
   {
+    id: "hard-feedback",
     title: "Partner-office feedback is hard to collect",
     text: "Critics or office evaluators often submit feedback late, informally, or in inconsistent formats. That makes student evaluation harder to track and defend.",
   },
   {
+    id: "manual-reports",
     title: "Reports take too much manual effort",
     text: "When administrators need summaries, staff still have to check attendance logs, compare spreadsheets, ask teachers for updates, and manually reconcile missing records.",
   },
@@ -53,24 +104,28 @@ const painPoints = [
 
 const roleCards = [
   {
+    id: "admin",
     title: "Admin",
     icon: LayoutDashboard,
     value: "Full OJT command center",
     text: "Manage students, teachers, offices, critics, assignments, attendance records, progress, evaluations, and reports from one dashboard.",
   },
   {
+    id: "teacher",
     title: "Teacher",
     icon: Users2,
     value: "Student monitoring made easier",
     text: "Monitor assigned students, check attendance and progress, identify who needs follow-up, and support students before problems become bigger.",
   },
   {
+    id: "student",
     title: "Student",
     icon: ClipboardCheck,
     value: "Clearer OJT responsibility",
     text: "Submit attendance, track completed hours, view progress, and see evaluation status without depending only on chat updates or paper records.",
   },
   {
+    id: "critic",
     title: "Critic",
     icon: MessageSquareText,
     value: "Structured partner-office evaluation",
@@ -80,31 +135,37 @@ const roleCards = [
 
 const benefits = [
   {
+    id: "less-manual-checking",
     title: "Less manual checking",
     icon: Clock3,
     text: "Reduce repetitive monitoring work from paper logs, Excel files, Messenger follow-ups, and last-minute record checking.",
   },
   {
+    id: "clear-progress",
     title: "Clear student progress",
     icon: CalendarCheck2,
     text: "Track completed hours, remaining hours, missing attendance, pending evaluations, and students who need immediate attention.",
   },
   {
+    id: "location-context",
     title: "Location-aware attendance context",
     icon: MapPinned,
     text: "Support clearer attendance monitoring with location-based submission context, helping schools review records with better confidence.",
   },
   {
+    id: "structured-evaluations",
     title: "Structured critic evaluations",
     icon: BadgeCheck,
     text: "Collect partner-office feedback using consistent scoring, comments, and recommendations instead of scattered or informal submissions.",
   },
   {
+    id: "cleaner-documentation",
     title: "Cleaner documentation",
     icon: FileText,
     text: "Keep OJT records easier to prepare for review, completion checking, internal reports, documentation, and school-level monitoring.",
   },
   {
+    id: "role-based-workflow",
     title: "Role-based workflow",
     icon: ShieldCheck,
     text: "Admin, teacher, student, and critic portals are separated so every user sees the right tools for their responsibility.",
@@ -112,21 +173,57 @@ const benefits = [
 ];
 
 const outcomes = [
-  "Know who is assigned and where they are deployed.",
-  "See who is attending and who is falling behind.",
-  "Track pending critic evaluations before clearance time.",
-  "Reduce repeated follow-ups across chat and spreadsheets.",
-  "Prepare cleaner records for monitoring and reporting.",
-  "Give each role a focused portal instead of one confusing system.",
+  {
+    id: "assigned-deployment",
+    text: "Know who is assigned and where they are deployed.",
+  },
+  {
+    id: "attendance-progress",
+    text: "See who is attending and who is falling behind.",
+  },
+  {
+    id: "pending-evaluations",
+    text: "Track pending critic evaluations before clearance time.",
+  },
+  {
+    id: "reduce-followups",
+    text: "Reduce repeated follow-ups across chat and spreadsheets.",
+  },
+  {
+    id: "clean-records",
+    text: "Prepare cleaner records for monitoring and reporting.",
+  },
+  {
+    id: "focused-portal",
+    text: "Give each role a focused portal instead of one confusing system.",
+  },
 ];
 
 const workflow = [
-  "Admin creates batches, students, teachers, offices, and critics.",
-  "Students are assigned to partner offices and linked with the right teacher and critic.",
-  "Students submit attendance and build their OJT record over time.",
-  "Teachers monitor assigned students and follow up when progress is weak.",
-  "Critics submit structured evaluations from the partner-office side.",
-  "Admins review organized attendance, progress, evaluation, and reporting data.",
+  {
+    id: "create-records",
+    text: "Admin creates batches, students, teachers, offices, and critics.",
+  },
+  {
+    id: "assign-students",
+    text: "Students are assigned to partner offices and linked with the right teacher and critic.",
+  },
+  {
+    id: "submit-attendance",
+    text: "Students submit attendance and build their OJT record over time.",
+  },
+  {
+    id: "teacher-monitoring",
+    text: "Teachers monitor assigned students and follow up when progress is weak.",
+  },
+  {
+    id: "critic-evaluation",
+    text: "Critics submit structured evaluations from the partner-office side.",
+  },
+  {
+    id: "admin-review",
+    text: "Admins review organized attendance, progress, evaluation, and reporting data.",
+  },
 ];
 
 const faqs = [
@@ -185,7 +282,7 @@ function SectionHeading({
     <motion.div {...fadeUp} className="mx-auto max-w-3xl text-center">
       <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
         <Sparkles className="h-3.5 w-3.5" />
-        {eyebrow}
+        <span>{eyebrow}</span>
       </div>
 
       <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
@@ -202,6 +299,15 @@ function SectionHeading({
 function FAQAccordion() {
   const [openId, setOpenId] = useState<string | null>(faqs[0]?.id ?? null);
 
+  useEffect(() => {
+    const hash = window.location.hash.replace("#", "");
+    const matchingFAQ = faqs.find((faq) => faq.id === hash);
+
+    if (matchingFAQ) {
+      setOpenId(matchingFAQ.id);
+    }
+  }, []);
+
   function toggleFAQ(id: string) {
     setOpenId((current) => (current === id ? null : id));
 
@@ -216,7 +322,7 @@ function FAQAccordion() {
         const isOpen = openId === faq.id;
 
         return (
-          <div key={`faq-${faq.id}`} id={faq.id} className="scroll-mt-24">
+          <div key={faq.id} id={faq.id} className="scroll-mt-24">
             <button
               type="button"
               onClick={() => toggleFAQ(faq.id)}
@@ -229,6 +335,7 @@ function FAQAccordion() {
               </span>
 
               <ChevronDown
+                aria-hidden="true"
                 className={`h-5 w-5 shrink-0 text-primary transition-transform duration-200 ${
                   isOpen ? "rotate-180" : ""
                 }`}
@@ -238,7 +345,7 @@ function FAQAccordion() {
             <AnimatePresence initial={false}>
               {isOpen ? (
                 <motion.div
-                  key={`faq-answer-${faq.id}`}
+                  key={`answer-${faq.id}`}
                   id={`answer-${faq.id}`}
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
@@ -313,18 +420,15 @@ Thank you.`);
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground lg:flex">
-            <a href="#problem" className="transition hover:text-foreground">
-              Problem
-            </a>
-            <a href="#solution" className="transition hover:text-foreground">
-              4 Roles
-            </a>
-            <a href="#benefits" className="transition hover:text-foreground">
-              Benefits
-            </a>
-            <a href="#faq" className="transition hover:text-foreground">
-              FAQ
-            </a>
+            {navLinks.map((link) => (
+              <a
+                key={link.id}
+                href={link.href}
+                className="transition hover:text-foreground"
+              >
+                {link.label}
+              </a>
+            ))}
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -335,14 +439,12 @@ Thank you.`);
               Request Demo
             </a>
 
-            
-
             <Link
               href="/login"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
             >
               Get Started
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
         </div>
@@ -355,8 +457,8 @@ Thank you.`);
           transition={{ duration: 0.65 }}
         >
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-xs font-semibold text-primary">
-            <School className="h-4 w-4" />
-            For schools managing OJT, practicum, and internships
+            <School className="h-4 w-4" aria-hidden="true" />
+            <span>For schools managing OJT, practicum, and internships</span>
           </div>
 
           <h1 className="mt-6 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
@@ -365,7 +467,7 @@ Thank you.`);
 
           <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
             Nexora gives schools one place to monitor attendance, assignments,
-            student progress, and critic evaluations — so coordinators can see
+            student progress, and critic evaluations, so coordinators can see
             what is happening before records become a problem.
           </p>
 
@@ -375,7 +477,7 @@ Thank you.`);
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:opacity-90"
             >
               Request a Demo
-              <Mail className="h-4 w-4" />
+              <Mail className="h-4 w-4" aria-hidden="true" />
             </a>
 
             <Link
@@ -383,24 +485,21 @@ Thank you.`);
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-card px-6 py-3 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-secondary"
             >
               Get Started
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
-
-            
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            {[
-              "4 role-based portals",
-              "Digital critic evaluation",
-              "Progress and report visibility",
-            ].map((item) => (
+            {heroProofs.map((item) => (
               <div
-                key={`hero-proof-${item}`}
+                key={item.id}
                 className="rounded-2xl border border-border bg-card/70 p-4 text-sm font-semibold"
               >
-                <CheckCircle2 className="mb-2 h-4 w-4 text-primary" />
-                {item}
+                <CheckCircle2
+                  className="mb-2 h-4 w-4 text-primary"
+                  aria-hidden="true"
+                />
+                {item.label}
               </div>
             ))}
           </div>
@@ -425,14 +524,9 @@ Thank you.`);
             </div>
 
             <div className="mt-5 grid grid-cols-2 gap-3">
-              {[
-                { label: "Students", value: "248" },
-                { label: "Assignments", value: "196" },
-                { label: "Partner Offices", value: "32" },
-                { label: "Evaluations", value: "87" },
-              ].map((item) => (
+              {dashboardStats.map((item) => (
                 <div
-                  key={`dashboard-stat-${item.label}`}
+                  key={item.id}
                   className="rounded-2xl border border-border bg-card p-4"
                 >
                   <p className="text-xs text-muted-foreground">{item.label}</p>
@@ -445,13 +539,9 @@ Thank you.`);
               <p className="text-sm font-bold">What schools can see faster</p>
 
               <div className="mt-4 space-y-3">
-                {[
-                  { label: "Students below expected progress", value: "18" },
-                  { label: "Pending critic evaluations", value: "24" },
-                  { label: "Students without placement", value: "7" },
-                ].map((item) => (
+                {attentionItems.map((item) => (
                   <div
-                    key={`attention-${item.label}`}
+                    key={item.id}
                     className="flex items-center justify-between gap-3 rounded-xl bg-background px-3 py-2 text-sm"
                   >
                     <span className="text-muted-foreground">{item.label}</span>
@@ -485,11 +575,14 @@ Thank you.`);
           {painPoints.map((item) => (
             <motion.div
               {...fadeUp}
-              key={`pain-${item.title}`}
+              key={item.id}
               className="rounded-3xl border border-border bg-card p-6"
             >
               <div className="flex gap-4">
-                <HelpCircle className="mt-1 h-5 w-5 shrink-0 text-amber-400" />
+                <HelpCircle
+                  className="mt-1 h-5 w-5 shrink-0 text-amber-400"
+                  aria-hidden="true"
+                />
                 <div>
                   <h3 className="font-bold">{item.title}</h3>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">
@@ -516,11 +609,11 @@ Thank you.`);
             return (
               <motion.div
                 {...fadeUp}
-                key={`role-${role.title}`}
+                key={role.id}
                 className="rounded-3xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/30"
               >
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Icon className="h-6 w-6" />
+                  <Icon className="h-6 w-6" aria-hidden="true" />
                 </div>
 
                 <h3 className="text-lg font-bold">{role.title}</h3>
@@ -541,8 +634,8 @@ Thank you.`);
           <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             <motion.div {...fadeUp}>
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                <Building2 className="h-4 w-4" />
-                What Changes
+                <Building2 className="h-4 w-4" aria-hidden="true" />
+                <span>What Changes</span>
               </div>
 
               <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
@@ -560,12 +653,15 @@ Thank you.`);
               {outcomes.map((item) => (
                 <motion.div
                   {...fadeUp}
-                  key={`outcome-${item}`}
+                  key={item.id}
                   className="flex items-start gap-3 rounded-2xl border border-border bg-background p-4"
                 >
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <CheckCircle2
+                    className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+                    aria-hidden="true"
+                  />
                   <p className="text-sm leading-6 text-muted-foreground">
-                    {item}
+                    {item.text}
                   </p>
                 </motion.div>
               ))}
@@ -588,11 +684,11 @@ Thank you.`);
             return (
               <motion.div
                 {...fadeUp}
-                key={`benefit-${benefit.title}`}
+                key={benefit.id}
                 className="rounded-3xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/30"
               >
                 <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Icon className="h-6 w-6" />
+                  <Icon className="h-6 w-6" aria-hidden="true" />
                 </div>
 
                 <h3 className="text-lg font-bold">{benefit.title}</h3>
@@ -610,8 +706,8 @@ Thank you.`);
           <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
             <motion.div {...fadeUp}>
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-                <Building2 className="h-4 w-4" />
-                School Workflow
+                <Building2 className="h-4 w-4" aria-hidden="true" />
+                <span>School Workflow</span>
               </div>
 
               <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
@@ -628,7 +724,7 @@ Thank you.`);
               {workflow.map((item, index) => (
                 <motion.div
                   {...fadeUp}
-                  key={`workflow-${index}-${item}`}
+                  key={item.id}
                   className="flex items-center gap-4 rounded-2xl border border-border bg-background p-4"
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
@@ -636,7 +732,7 @@ Thank you.`);
                   </div>
 
                   <p className="text-sm leading-6 text-muted-foreground">
-                    {item}
+                    {item.text}
                   </p>
                 </motion.div>
               ))}
@@ -651,7 +747,7 @@ Thank you.`);
           className="overflow-hidden rounded-[36px] border border-primary/20 bg-gradient-to-br from-primary/20 via-card to-card p-8 text-center sm:p-12"
         >
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-primary/10 text-primary">
-            <Sparkles className="h-8 w-8" />
+            <Sparkles className="h-8 w-8" aria-hidden="true" />
           </div>
 
           <h2 className="mt-6 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
@@ -670,7 +766,7 @@ Thank you.`);
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:opacity-90"
             >
               Request a Demo
-              <Mail className="h-4 w-4" />
+              <Mail className="h-4 w-4" aria-hidden="true" />
             </a>
 
             <Link
@@ -678,7 +774,7 @@ Thank you.`);
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-6 py-3 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-secondary"
             >
               Get Started
-              <ArrowRight className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
         </motion.div>
@@ -695,7 +791,7 @@ Thank you.`);
       </section>
 
       <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 transition hover:text-foreground">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-sm text-muted-foreground transition hover:text-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>© {new Date().getFullYear()} Nexora. OJT Monitoring Platform.</p>
           <p>Developer: Jaymar H. Maruji</p>
           <p>Centralized attendance. Clear evaluations. Better monitoring.</p>
