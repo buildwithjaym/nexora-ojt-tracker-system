@@ -1,0 +1,37 @@
+{
+  "id": "/",
+  "name": "Nexora - Your Trusted OJT Tracking System for Schools and Institutions",
+  "short_name": "Nexora",
+  "description": "A smart OJT (On-the-Job Training) management platform designed to simplify and secure internship tracking for students, critic, teachers, and institutions.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2563EB",
+  "theme_color": "#2563EB",
+  "categories": ["ojt", "edutech", "tracking system", "nexora", "4 roles"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Nexora mobile app icon"
+    }
+  ]
+}

@@ -307,7 +307,7 @@ Thank you.`);
             <div className="min-w-0">
               <p className="truncate text-sm font-bold sm:text-base">Nexora</p>
               <p className="truncate text-[11px] text-muted-foreground sm:text-xs">
-                Your Trusted OJT Tracking System for Schools and Institutions
+                OJT Monitoring Platform
               </p>
             </div>
           </Link>
