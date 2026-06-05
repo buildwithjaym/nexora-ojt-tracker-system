@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ClipboardCheck,
   Clock3,
+  Download,
   FileText,
   HelpCircle,
   LayoutDashboard,
@@ -21,9 +22,20 @@ import {
   MessageSquareText,
   School,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Users2,
 } from "lucide-react";
+
+type BeforeInstallPromptChoice = {
+  outcome: "accepted" | "dismissed";
+  platform: string;
+};
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<BeforeInstallPromptChoice>;
+}
 
 const fadeUp = {
   initial: { opacity: 0, y: 18 },
@@ -36,6 +48,7 @@ const navLinks = [
   { id: "problem", label: "Problem", href: "#problem" },
   { id: "solution", label: "4 Roles", href: "#solution" },
   { id: "benefits", label: "Benefits", href: "#benefits" },
+  { id: "download", label: "Install App", href: "#download-app" },
   { id: "faq", label: "FAQ", href: "#faq" },
 ];
 
@@ -226,6 +239,24 @@ const workflow = [
   },
 ];
 
+const installHighlights = [
+  {
+    id: "faster-access",
+    title: "Faster daily access",
+    text: "Open Nexora directly from the home screen without typing the website again.",
+  },
+  {
+    id: "better-adoption",
+    title: "Better user adoption",
+    text: "Students, teachers, and critics can return to the platform with one tap.",
+  },
+  {
+    id: "app-like-flow",
+    title: "App-like experience",
+    text: "Use Nexora like a lightweight school app without going through an app store.",
+  },
+];
+
 const faqs = [
   {
     id: "not-just-attendance",
@@ -393,6 +424,70 @@ Thank you.`);
     return `mailto:jaymmaruji@gmail.com?subject=${subject}&body=${body}`;
   }, []);
 
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+  const [isAppInstalled, setIsAppInstalled] = useState(false);
+
+  useEffect(() => {
+    const navigatorWithStandalone = window.navigator as Navigator & {
+      standalone?: boolean;
+    };
+
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      navigatorWithStandalone.standalone === true;
+
+    setIsAppInstalled(isStandalone);
+
+    function handleBeforeInstallPrompt(event: Event) {
+      event.preventDefault();
+      setDeferredPrompt(event as BeforeInstallPromptEvent);
+      setIsInstallable(true);
+    }
+
+    function handleAppInstalled() {
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+      setIsAppInstalled(true);
+    }
+
+    window.addEventListener(
+      "beforeinstallprompt",
+      handleBeforeInstallPrompt as EventListener
+    );
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        handleBeforeInstallPrompt as EventListener
+      );
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  async function handleInstallClick() {
+    if (!deferredPrompt || isAppInstalled) return;
+
+    await deferredPrompt.prompt();
+
+    const choiceResult = await deferredPrompt.userChoice;
+
+    setDeferredPrompt(null);
+    setIsInstallable(false);
+
+    if (choiceResult.outcome === "accepted") {
+      setIsAppInstalled(true);
+    }
+  }
+
+  const installButtonLabel = isAppInstalled
+    ? "Nexora is Installed"
+    : isInstallable
+      ? "Download Nexora App"
+      : "Install Available on Supported Browser";
+
   return (
     <main className="relative overflow-x-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.20),transparent_34%),radial-gradient(circle_at_80%_16%,rgba(20,184,166,0.14),transparent_24%),radial-gradient(circle_at_bottom,rgba(37,99,235,0.08),transparent_30%)]" />
@@ -487,6 +582,14 @@ Thank you.`);
               Get Started
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
+
+            <a
+              href="#download-app"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-primary/30 bg-primary/10 px-6 py-3 text-sm font-semibold text-primary transition hover:-translate-y-0.5 hover:bg-primary/15"
+            >
+              Install App
+              <Download className="h-4 w-4" aria-hidden="true" />
+            </a>
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -741,6 +844,103 @@ Thank you.`);
         </div>
       </section>
 
+      <section
+        id="download-app"
+        className="mx-auto max-w-7xl scroll-mt-24 px-4 py-20 sm:px-6"
+      >
+        <motion.div
+          {...fadeUp}
+          className="overflow-hidden rounded-[36px] border border-primary/20 bg-gradient-to-br from-primary/20 via-card to-card p-6 sm:p-8 lg:p-10"
+        >
+          <div className="grid gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+                <Smartphone className="h-4 w-4" aria-hidden="true" />
+                <span>Install Nexora</span>
+              </div>
+
+              <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl lg:text-5xl">
+                Put Nexora on every OJT user’s home screen.
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
+                Give admins, teachers, students, and critics faster access to
+                attendance tracking, progress monitoring, and evaluations.
+                Install Nexora as a PWA and open it like a real app, without
+                sending you through an app/play store.
+              </p>
+
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleInstallClick}
+                  disabled={!isInstallable || isAppInstalled}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition hover:-translate-y-0.5 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+                >
+                  {installButtonLabel}
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                </button>
+
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-border bg-background px-6 py-3 text-sm font-semibold transition hover:-translate-y-0.5 hover:bg-secondary"
+                >
+                  Continue in Browser
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </div>
+
+              {!isInstallable && !isAppInstalled ? (
+                <p className="mt-4 text-xs leading-6 text-muted-foreground">
+                  The install button becomes active when the browser confirms
+                  the app is installable. Make sure the site has a valid web app
+                  manifest, service worker, HTTPS, and proper PWA icons.
+                </p>
+              ) : null}
+
+              {isAppInstalled ? (
+                <p className="mt-4 text-xs leading-6 text-primary">
+                  Nexora is already running as an installed app on this device.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-3">
+              {installHighlights.map((item) => (
+                <motion.div
+                  {...fadeUp}
+                  key={item.id}
+                  className="rounded-2xl border border-border bg-background/80 p-5"
+                >
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2
+                      className="mt-0.5 h-5 w-5 shrink-0 text-primary"
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <h3 className="text-sm font-bold">{item.title}</h3>
+                      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                        {item.text}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+
+              <div className="rounded-2xl border border-primary/20 bg-primary/10 p-5">
+                <p className="text-sm font-semibold text-primary">
+                  Best for daily OJT use
+                </p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  A PWA install keeps Nexora visible where users already look:
+                  their phone or desktop home screen.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
       <section id="demo" className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
         <motion.div
           {...fadeUp}
@@ -784,7 +984,7 @@ Thank you.`);
         <SectionHeading
           eyebrow="FAQ"
           title="Direct answers to the real concerns schools have before trying Nexora."
-          description="Click a question and the answer opens immediately, similar to Google’s People Also Ask experience. Each answer is written to remove doubt and connect Nexora to a real OJT problem."
+          description="Click a question and the answer opens immediately. Each answer is written to remove doubt and connect Nexora to a real OJT problem."
         />
 
         <FAQAccordion />
