@@ -893,8 +893,7 @@ Thank you.`);
               {!isInstallable && !isAppInstalled ? (
                 <p className="mt-4 text-xs leading-6 text-muted-foreground">
                   The install button becomes active when the browser confirms
-                  the app is installable. Make sure the site has a valid web app
-                  manifest, service worker, HTTPS, and proper PWA icons.
+                  the app is installable. 
                 </p>
               ) : null}
 
