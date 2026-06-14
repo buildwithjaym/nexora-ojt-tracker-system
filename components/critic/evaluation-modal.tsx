@@ -1,54 +1,283 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
-import { ClipboardCheck, GraduationCap, Star, X } from "lucide-react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
+import { ClipboardCheck, GraduationCap, X } from "lucide-react";
 import { toast } from "sonner";
-import { submitEvaluation } from "@/app/critic/evaluations/actions";
 
-type EvaluationModalProps = {
+import {
+  submitEvaluation,
+  type SubmittedEvaluation,
+} from "@/app/critic/evaluations/actions";
+
+const MIN_SCORE = 70;
+const MAX_SCORE = 95;
+
+const scoreNames = [
+  "assertiveness",
+  "tact_ethics",
+  "courtesy_ethics",
+  "accepts_criticism",
+  "written_communication",
+  "oral_communication",
+  "active_listening",
+  "learning_ability",
+  "computer_knowledge",
+  "potential_growth",
+  "sound_judgment",
+  "theory_integration",
+  "output_quality",
+  "task_timeliness",
+  "attire",
+  "decorum",
+  "self_confidence",
+  "enthusiasm",
+] as const;
+
+type ScoreName = (typeof scoreNames)[number];
+type ScoreState = Record<ScoreName, string>;
+
+type Props = {
   assignmentId: string;
   studentId: string;
   studentName: string;
+  onSubmitted?: (evaluation: SubmittedEvaluation) => void;
 };
 
-const criteria = [
+type EvaluationItem = {
+  name: ScoreName;
+  label: string;
+};
+
+type EvaluationSection = {
+  title: string;
+  items: EvaluationItem[];
+};
+
+const evaluationSections: EvaluationSection[] = [
   {
-    name: "attendance_score",
-    label: "Attendance & Punctuality",
-    help: "Consistency, time discipline, and attendance behavior.",
+    title: "Interpersonal Skills",
+    items: [
+      {
+        name: "assertiveness",
+        label: "Approaches new tasks with appropriate confidence and initiative.",
+      },
+      {
+        name: "tact_ethics",
+        label: "Works with supervisors and peers with tact and consideration.",
+      },
+      {
+        name: "courtesy_ethics",
+        label: "Maintains courtesy and professional ethics.",
+      },
+      {
+        name: "accepts_criticism",
+        label: "Receives feedback positively and applies it constructively.",
+      },
+    ],
   },
   {
-    name: "work_quality_score",
-    label: "Work Quality",
-    help: "Accuracy, quality of output, and task completion.",
+    title: "Communication Skills",
+    items: [
+      {
+        name: "written_communication",
+        label: "Communicates ideas clearly in writing.",
+      },
+      {
+        name: "oral_communication",
+        label: "Communicates ideas clearly in conversation and presentations.",
+      },
+      {
+        name: "active_listening",
+        label: "Listens attentively and responds appropriately.",
+      },
+    ],
   },
   {
-    name: "professionalism_score",
-    label: "Professionalism",
-    help: "Workplace conduct, respect, and responsibility.",
+    title: "Technical Skills",
+    items: [
+      {
+        name: "learning_ability",
+        label: "Learns unfamiliar tasks and procedures efficiently.",
+      },
+      {
+        name: "computer_knowledge",
+        label: "Uses relevant computer tools with confidence.",
+      },
+      {
+        name: "potential_growth",
+        label: "Shows clear potential for continued professional growth.",
+      },
+      {
+        name: "sound_judgment",
+        label: "Uses sound judgment and practical common sense.",
+      },
+    ],
   },
   {
-    name: "communication_score",
-    label: "Communication",
-    help: "Clarity, coordination, and responsiveness.",
+    title: "Work Knowledge",
+    items: [
+      {
+        name: "theory_integration",
+        label: "Applies classroom concepts to actual work situations.",
+      },
+      {
+        name: "output_quality",
+        label: "Produces accurate, organized, and presentable work.",
+      },
+      {
+        name: "task_timeliness",
+        label: "Completes assigned tasks within the expected time.",
+      },
+    ],
   },
   {
-    name: "initiative_score",
-    label: "Initiative",
-    help: "Willingness to learn, ask questions, and take action.",
+    title: "Professional Conduct",
+    items: [
+      {
+        name: "attire",
+        label: "Reports in appropriate workplace attire.",
+      },
+      {
+        name: "decorum",
+        label: "Observes proper workplace conduct and decorum.",
+      },
+      {
+        name: "self_confidence",
+        label: "Works with appropriate independence and confidence.",
+      },
+      {
+        name: "enthusiasm",
+        label: "Shows consistent enthusiasm and a constructive attitude.",
+      },
+    ],
   },
 ];
+
+function createInitialScores(): ScoreState {
+  return Object.fromEntries(
+    scoreNames.map((name) => [name, "95"])
+  ) as ScoreState;
+}
+
+function isValidScore(value: string): boolean {
+  if (value.trim() === "") return false;
+
+  const score = Number(value);
+
+  return (
+    Number.isInteger(score) && score >= MIN_SCORE && score <= MAX_SCORE
+  );
+}
+
+function getSuggestedRecommendation(average: number | null) {
+  if (average === null) return "recommended";
+  if (average >= 93) return "highly_recommended";
+  if (average >= 85) return "recommended";
+  if (average >= 75) return "needs_improvement";
+  return "not_recommended";
+}
+
+function formatRecommendation(value: string) {
+  switch (value) {
+    case "highly_recommended":
+      return "Highly Recommended";
+    case "recommended":
+      return "Recommended";
+    case "needs_improvement":
+      return "Needs Improvement";
+    default:
+      return "Not Recommended";
+  }
+}
 
 export function EvaluationModal({
   assignmentId,
   studentId,
   studentName,
-}: EvaluationModalProps) {
+  onSubmitted,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [scores, setScores] = useState<ScoreState>(createInitialScores);
+
+  const allScoresValid = useMemo(
+    () => scoreNames.every((name) => isValidScore(scores[name])),
+    [scores]
+  );
+
+  const averageRating = useMemo(() => {
+    if (!allScoresValid) return null;
+
+    const total = scoreNames.reduce(
+      (sum, name) => sum + Number(scores[name]),
+      0
+    );
+
+    return Number((total / scoreNames.length).toFixed(2));
+  }, [allScoresValid, scores]);
+
+  const suggestedRecommendation = useMemo(
+    () => getSuggestedRecommendation(averageRating),
+    [averageRating]
+  );
+
+  const [recommendation, setRecommendation] = useState(
+    suggestedRecommendation
+  );
+
+  useEffect(() => {
+    setRecommendation(suggestedRecommendation);
+  }, [suggestedRecommendation]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !isPending) {
+        setOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isPending, open]);
+
+  function handleScoreChange(name: ScoreName, value: string) {
+    // Keep the raw input while the critic is typing. Validation is shown
+    // separately, so entering values such as 89 remains natural.
+    if (!/^\d{0,3}$/.test(value)) return;
+
+    setScores((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  function resetForm() {
+    setScores(createInitialScores());
+    setRecommendation("highly_recommended");
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!allScoresValid) {
+      toast.error("Every rating must be a whole number from 70 to 95.");
+      return;
+    }
 
     const formData = new FormData(event.currentTarget);
 
@@ -61,6 +290,8 @@ export function EvaluationModal({
       }
 
       toast.success(result.message);
+      onSubmitted?.(result.data);
+      resetForm();
       setOpen(false);
     });
   }
@@ -70,164 +301,208 @@ export function EvaluationModal({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-2xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:scale-[1.02] hover:bg-primary/90"
+        className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         Evaluate
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-border bg-card shadow-2xl">
-            <div className="sticky top-0 z-10 flex items-start justify-between border-b border-border bg-card px-6 py-5">
-              <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                  <ClipboardCheck className="h-3.5 w-3.5" />
-                  Critic Evaluation
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isPending) {
+              setOpen(false);
+            }
+          }}
+        >
+          <form
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="evaluation-title"
+            onSubmit={handleSubmit}
+            className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border bg-card shadow-2xl"
+          >
+            <div className="sticky top-0 z-10 flex items-start justify-between border-b bg-card/95 px-5 py-4 backdrop-blur">
+              <div className="min-w-0">
+                <div className="mb-1 flex items-center gap-2 text-xs font-medium text-primary">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Practicum evaluation
                 </div>
-
-                <h2 className="text-xl font-bold">Evaluate {studentName}</h2>
+                <h2 id="evaluation-title" className="truncate text-xl font-semibold">
+                  {studentName}
+                </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Submit the practicum grade, rubric scores, and professional
-                  feedback for this student.
+                  Rate each factor using a whole number from 70 to 95.
                 </p>
               </div>
 
               <button
                 type="button"
+                aria-label="Close evaluation"
+                disabled={isPending}
                 onClick={() => setOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-background hover:bg-muted"
+                className="ml-4 grid h-9 w-9 shrink-0 place-items-center rounded-lg border text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6 px-6 py-6">
+            <div className="space-y-7 p-5 md:p-6">
               <input type="hidden" name="assignment_id" value={assignmentId} />
               <input type="hidden" name="student_id" value={studentId} />
 
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                <div className="mb-3 flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-primary" />
-                  <p className="text-sm font-semibold">Practicum Grade</p>
-                </div>
-
-                <input
-                  name="practicum_grade"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  required
-                  placeholder="Example: 95"
-                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-primary"
-                />
-
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Enter the final practicum grade from 0 to 100.
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                {criteria.map((item) => (
-                  <div
-                    key={item.name}
-                    className="rounded-2xl border border-border bg-background p-4"
-                  >
-                    <div className="mb-3 flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                        <Star className="h-4 w-4" />
-                      </div>
-
-                      <div>
-                        <p className="text-sm font-semibold">{item.label}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {item.help}
-                        </p>
-                      </div>
-                    </div>
-
-                    <select
-                      name={item.name}
-                      required
-                      defaultValue="5"
-                      className="h-12 w-full rounded-2xl border border-border bg-card px-4 text-sm text-foreground outline-none focus:border-primary"
-                    >
-                      <option value="5">5 - Excellent</option>
-                      <option value="4">4 - Very Good</option>
-                      <option value="3">3 - Good</option>
-                      <option value="2">2 - Needs Improvement</option>
-                      <option value="1">1 - Poor</option>
-                    </select>
-                  </div>
-                ))}
-
-                <div className="rounded-2xl border border-border bg-background p-4">
-                  <p className="text-sm font-semibold">Recommendation</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Overall workplace recommendation.
+              <div className="flex flex-col gap-4 rounded-2xl border bg-muted/25 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium">Practicum grade</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Automatically averaged from all {scoreNames.length} ratings.
                   </p>
+                </div>
 
-                  <select
-                    name="recommendation"
-                    defaultValue="recommended"
-                    className="mt-3 h-12 w-full rounded-2xl border border-border bg-card px-4 text-sm text-foreground outline-none focus:border-primary"
-                  >
-                    <option value="highly_recommended">
-                      Highly Recommended
-                    </option>
-                    <option value="recommended">Recommended</option>
-                    <option value="needs_improvement">Needs Improvement</option>
-                    <option value="not_recommended">Not Recommended</option>
-                  </select>
+                <div className="flex items-center gap-3">
+                  <GraduationCap className="h-6 w-6 text-primary" />
+                  <span className="min-w-24 text-right text-3xl font-semibold tabular-nums">
+                    {averageRating === null ? "—" : averageRating.toFixed(2)}
+                  </span>
                 </div>
               </div>
 
-              <TextArea
-                name="strengths"
-                label="Strengths"
-                placeholder="What did the student do well?"
-              />
+              {evaluationSections.map((section) => (
+                <section key={section.title} className="space-y-3">
+                  <div className="flex items-center justify-between gap-3 border-b pb-2">
+                    <h3 className="font-semibold">{section.title}</h3>
+                    <span className="text-xs text-muted-foreground">70–95</span>
+                  </div>
 
-              <TextArea
-                name="improvement_areas"
-                label="Areas for Improvement"
-                placeholder="What should the student improve?"
-              />
+                  <div className="divide-y rounded-xl border">
+                    {section.items.map((item) => {
+                      const valid = isValidScore(scores[item.name]);
 
-              <TextArea
-                name="general_comment"
-                label="General Comment"
-                placeholder="Add your final remarks here."
-              />
+                      return (
+                        <label
+                          key={item.name}
+                          className="grid gap-3 p-4 sm:grid-cols-[1fr_96px] sm:items-center"
+                        >
+                          <span className="text-sm leading-6 text-foreground/80">
+                            {item.label}
+                          </span>
 
-              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
-                By submitting, you confirm that the student has completed the
-                required OJT hours and that this evaluation reflects their
-                workplace performance.
+                          <span>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              name={item.name}
+                              value={scores[item.name]}
+                              min={MIN_SCORE}
+                              max={MAX_SCORE}
+                              step={1}
+                              required
+                              aria-invalid={!valid}
+                              onChange={(event) =>
+                                handleScoreChange(item.name, event.target.value)
+                              }
+                              className={`h-10 w-full rounded-lg border bg-background px-3 text-center font-semibold tabular-nums outline-none transition focus:ring-2 focus:ring-primary/25 ${
+                                valid
+                                  ? "border-input"
+                                  : "border-destructive/70 text-destructive"
+                              }`}
+                            />
+                            {!valid && (
+                              <span className="mt-1 block text-center text-[11px] text-destructive">
+                                Enter 70–95
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+
+              <section className="rounded-2xl border bg-muted/20 p-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SummaryItem
+                    label="Average rating"
+                    value={
+                      averageRating === null ? "Incomplete" : averageRating.toFixed(2)
+                    }
+                  />
+                  <SummaryItem
+                    label="Suggested recommendation"
+                    value={formatRecommendation(suggestedRecommendation)}
+                  />
+                </div>
+              </section>
+
+              <div className="grid gap-4">
+                <TextArea
+                  name="strengths"
+                  label="Strengths"
+                  placeholder="Briefly note observed strengths."
+                />
+                <TextArea
+                  name="improvement_areas"
+                  label="Areas for improvement"
+                  placeholder="Briefly note areas that need further development."
+                />
+                <TextArea
+                  name="general_comment"
+                  label="General comments"
+                  placeholder="Add an optional overall comment."
+                />
               </div>
 
-              <div className="flex justify-end gap-3 border-t border-border pt-5">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="rounded-2xl border border-border bg-background px-5 py-2.5 text-sm font-semibold hover:bg-muted"
+              <label className="block space-y-2">
+                <span className="text-sm font-medium">Recommendation</span>
+                <select
+                  name="recommendation"
+                  value={recommendation}
+                  onChange={(event) => setRecommendation(event.target.value)}
+                  className="h-11 w-full rounded-xl border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/25"
                 >
-                  Cancel
-                </button>
+                  <option value="highly_recommended">Highly Recommended</option>
+                  <option value="recommended">Recommended</option>
+                  <option value="needs_improvement">Needs Improvement</option>
+                  <option value="not_recommended">Not Recommended</option>
+                </select>
+                <span className="block text-xs text-muted-foreground">
+                  The suggested value follows the computed average and may be adjusted before submission.
+                </span>
+              </label>
+            </div>
 
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="rounded-2xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
-                >
-                  {isPending ? "Submitting..." : "Submit Evaluation"}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="sticky bottom-0 flex justify-end gap-3 border-t bg-card/95 px-5 py-4 backdrop-blur">
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => setOpen(false)}
+                className="rounded-xl border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={isPending || !allScoresValid}
+                className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isPending ? "Submitting…" : "Submit evaluation"}
+              </button>
+            </div>
+          </form>
         </div>
       )}
     </>
+  );
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 font-semibold">{value}</p>
+    </div>
   );
 }
 
@@ -241,13 +516,14 @@ function TextArea({
   placeholder: string;
 }) {
   return (
-    <label className="space-y-2">
-      <span className="text-sm font-semibold">{label}</span>
+    <label className="block space-y-2">
+      <span className="text-sm font-medium">{label}</span>
       <textarea
         name={name}
-        rows={4}
+        rows={3}
+        maxLength={1000}
         placeholder={placeholder}
-        className="min-h-[110px] w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary"
+        className="w-full resize-y rounded-xl border bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground/70 focus:ring-2 focus:ring-primary/25"
       />
     </label>
   );

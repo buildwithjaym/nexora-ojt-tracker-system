@@ -353,7 +353,7 @@ function FAQAccordion() {
         const isOpen = openId === faq.id;
 
         return (
-          <div key={faq.id} id={faq.id} className="scroll-mt-24">
+          <div key={`faq-${faq.id}`} id={faq.id} className="scroll-mt-24">
             <button
               type="button"
               onClick={() => toggleFAQ(faq.id)}
@@ -412,7 +412,7 @@ Name:
 School / Organization:
 Role / Position:
 Estimated number of OJT students:
-Current OJT monitoring process: Paper / Excel / Messenger / Other
+Current OJT monitoring process: Paper / Excel / Messenger / Other: 
 Main OJT monitoring problem we want to solve:
 Preferred demo date and time:
 Preferred contact number:
@@ -517,7 +517,7 @@ Thank you.`);
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground lg:flex">
             {navLinks.map((link) => (
               <a
-                key={link.id}
+                key={`nav-${link.id}`}
                 href={link.href}
                 className="transition hover:text-foreground"
               >
@@ -595,7 +595,7 @@ Thank you.`);
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             {heroProofs.map((item) => (
               <div
-                key={item.id}
+                key={`hero-proof-${item.id}`}
                 className="rounded-2xl border border-border bg-card/70 p-4 text-sm font-semibold"
               >
                 <CheckCircle2
@@ -629,7 +629,7 @@ Thank you.`);
             <div className="mt-5 grid grid-cols-2 gap-3">
               {dashboardStats.map((item) => (
                 <div
-                  key={item.id}
+                  key={`dashboard-stat-${item.id}`}
                   className="rounded-2xl border border-border bg-card p-4"
                 >
                   <p className="text-xs text-muted-foreground">{item.label}</p>
@@ -644,7 +644,7 @@ Thank you.`);
               <div className="mt-4 space-y-3">
                 {attentionItems.map((item) => (
                   <div
-                    key={item.id}
+                    key={`attention-${item.id}`}
                     className="flex items-center justify-between gap-3 rounded-xl bg-background px-3 py-2 text-sm"
                   >
                     <span className="text-muted-foreground">{item.label}</span>
@@ -678,7 +678,7 @@ Thank you.`);
           {painPoints.map((item) => (
             <motion.div
               {...fadeUp}
-              key={item.id}
+              key={`pain-point-${item.id}`}
               className="rounded-3xl border border-border bg-card p-6"
             >
               <div className="flex gap-4">
@@ -705,31 +705,41 @@ Thank you.`);
           description="Each role gets a focused portal. Admins manage the operation, teachers monitor students, students submit records, and critics evaluate performance."
         />
 
-        <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {roleCards.map((role) => {
-            const Icon = role.icon;
-
-            return (
-              <motion.div
-                {...fadeUp}
-                key={role.id}
-                className="rounded-3xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/30"
-              >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Icon className="h-6 w-6" aria-hidden="true" />
-                </div>
-
-                <h3 className="text-lg font-bold">{role.title}</h3>
-                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                  {role.value}
-                </p>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                  {role.text}
-                </p>
-              </motion.div>
-            );
-          })}
+       <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+  {roleCards.map((role) => {
+    const Icon = role.icon;
+    return (
+      <motion.div
+        {...fadeUp}
+        key={`role-card-${role.id}`}
+        className="rounded-3xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/30"
+      >
+        <div
+          key={`role-icon-${role.id}`}
+          className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+        >
+          <Icon className="h-6 w-6" aria-hidden="true" />
         </div>
+
+        <h3 key={`role-title-${role.id}`} className="text-lg font-bold">
+          {role.title}
+        </h3>
+        <p
+          key={`role-value-${role.id}`}
+          className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-primary"
+        >
+          {role.value}
+        </p>
+        <p
+          key={`role-text-${role.id}`}
+          className="mt-3 text-sm leading-7 text-muted-foreground"
+        >
+          {role.text}
+        </p>
+      </motion.div>
+    );
+  })}
+</div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6">
@@ -756,14 +766,18 @@ Thank you.`);
               {outcomes.map((item) => (
                 <motion.div
                   {...fadeUp}
-                  key={item.id}
+                  key={`outcome-${item.id}`}
                   className="flex items-start gap-3 rounded-2xl border border-border bg-background p-4"
                 >
                   <CheckCircle2
+                    key={`outcome-icon-${item.id}`}
                     className="mt-0.5 h-5 w-5 shrink-0 text-primary"
                     aria-hidden="true"
                   />
-                  <p className="text-sm leading-6 text-muted-foreground">
+                  <p
+                    key={`outcome-text-${item.id}`}
+                    className="text-sm leading-6 text-muted-foreground"
+                  >
                     {item.text}
                   </p>
                 </motion.div>
@@ -787,15 +801,23 @@ Thank you.`);
             return (
               <motion.div
                 {...fadeUp}
-                key={benefit.id}
+                key={`benefit-${benefit.id}`}
                 className="rounded-3xl border border-border bg-card p-6 transition hover:-translate-y-1 hover:border-primary/30"
               >
-                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <div
+                  key={`benefit-icon-${benefit.id}`}
+                  className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+                >
                   <Icon className="h-6 w-6" aria-hidden="true" />
                 </div>
 
-                <h3 className="text-lg font-bold">{benefit.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                <h3 key={`benefit-title-${benefit.id}`} className="text-lg font-bold">
+                  {benefit.title}
+                </h3>
+                <p
+                  key={`benefit-text-${benefit.id}`}
+                  className="mt-3 text-sm leading-7 text-muted-foreground"
+                >
                   {benefit.text}
                 </p>
               </motion.div>
@@ -827,14 +849,20 @@ Thank you.`);
               {workflow.map((item, index) => (
                 <motion.div
                   {...fadeUp}
-                  key={item.id}
+                  key={`workflow-${item.id}`}
                   className="flex items-center gap-4 rounded-2xl border border-border bg-background p-4"
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary">
+                  <div
+                    key={`workflow-number-${item.id}`}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary"
+                  >
                     {index + 1}
                   </div>
 
-                  <p className="text-sm leading-6 text-muted-foreground">
+                  <p
+                    key={`workflow-text-${item.id}`}
+                    className="text-sm leading-6 text-muted-foreground"
+                  >
                     {item.text}
                   </p>
                 </motion.div>
@@ -908,7 +936,7 @@ Thank you.`);
               {installHighlights.map((item) => (
                 <motion.div
                   {...fadeUp}
-                  key={item.id}
+                  key={`install-highlight-${item.id}`}
                   className="rounded-2xl border border-border bg-background/80 p-5"
                 >
                   <div className="flex items-start gap-3">
