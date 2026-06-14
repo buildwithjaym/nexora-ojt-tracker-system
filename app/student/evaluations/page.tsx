@@ -9,6 +9,7 @@ import {
   Star,
   UserRound,
 } from "lucide-react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 
 type Evaluation = {
@@ -163,20 +164,10 @@ export default function StudentEvaluationsPage() {
   }, [supabase]);
 
   const download = () => {
-    if (!evaluation) return;
-
-    const blob = new Blob([JSON.stringify(evaluation, null, 2)], {
-      type: "application/json",
-    });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = `evaluation-${evaluation.id}.json`;
-    a.click();
-  };
-
+  toast.info("Download feature is coming soon.", {
+    description: "We are currently finalizing the official PDF export system.",
+  });
+};
   return (
     <div className="min-h-screen bg-[#0b1220] px-6 py-6 text-white">
 
