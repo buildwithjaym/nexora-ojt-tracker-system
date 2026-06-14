@@ -4,6 +4,41 @@ import { TeacherEvaluationsClient } from "@/components/teacher/teacher-evaluatio
 
 export const dynamic = "force-dynamic";
 
+const EVALUATION_SELECT = `
+  id,
+  assignment_id,
+  student_id,
+  critic_id,
+  office_id,
+  strengths,
+  improvement_areas,
+  general_comment,
+  recommendation,
+  status,
+  submitted_at,
+  created_at,
+  updated_at,
+  assertiveness,
+  tact_ethics,
+  courtesy_ethics,
+  accepts_criticism,
+  written_communication,
+  oral_communication,
+  active_listening,
+  learning_ability,
+  computer_knowledge,
+  potential_growth,
+  sound_judgment,
+  theory_integration,
+  output_quality,
+  task_timeliness,
+  attire,
+  decorum,
+  self_confidence,
+  enthusiasm,
+  average_rating
+`;
+
 export default async function TeacherEvaluationsPage() {
   const supabase = await createClient();
 
@@ -30,49 +65,80 @@ export default async function TeacherEvaluationsPage() {
     .order("created_at", { ascending: false });
 
   if (assignmentsError) {
-    console.error("Assignments error:", JSON.stringify(assignmentsError, null, 2));
+    console.error(
+      "Teacher evaluations - assignments query failed:",
+      assignmentsError,
+    );
   }
 
   const safeAssignments = assignments ?? [];
 
-  const studentIds = [...new Set(safeAssignments.map((a) => a.student_id))];
-  const officeIds = [...new Set(safeAssignments.map((a) => a.office_id))];
-  const assignmentIds = safeAssignments.map((a) => a.id);
+  if (safeAssignments.length === 0) {
+    return (
+      <TeacherEvaluationsClient
+        teacherName={`${teacher.first_name} ${teacher.last_name}`}
+        rows={[]}
+      />
+    );
+  }
 
-  const [
-    { data: students, error: studentsError },
-    { data: offices, error: officesError },
-    { data: evaluations, error: evaluationsError },
-  ] = await Promise.all([
-    studentIds.length > 0
-      ? supabase
-          .from("students")
-          .select(
-            "id, student_number, first_name, middle_name, last_name, required_hours, completed_hours, status"
-          )
-          .in("id", studentIds)
-      : Promise.resolve({ data: [], error: null }),
+  const studentIds = [
+    ...new Set(safeAssignments.map((assignment) => assignment.student_id)),
+  ];
+  const officeIds = [
+    ...new Set(safeAssignments.map((assignment) => assignment.office_id)),
+  ];
+  const assignmentIds = safeAssignments.map((assignment) => assignment.id);
 
-    officeIds.length > 0
-      ? supabase.from("offices").select("id, name").in("id", officeIds)
-      : Promise.resolve({ data: [], error: null }),
-
-    assignmentIds.length > 0
-      ? supabase
-          .from("evaluations")
-          .select("*")
-          .in("assignment_id", assignmentIds)
-          .order("submitted_at", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
+  const [studentsResult, officesResult, evaluationsResult] = await Promise.all([
+    supabase
+      .from("students")
+      .select(
+        "id, student_number, first_name, middle_name, last_name, required_hours, completed_hours, status",
+      )
+      .in("id", studentIds),
+    supabase.from("offices").select("id, name").in("id", officeIds),
+    supabase
+      .from("evaluations")
+      .select(EVALUATION_SELECT)
+      .in("assignment_id", assignmentIds)
+      .order("submitted_at", { ascending: false }),
   ]);
 
-  if (studentsError) console.error("Students error:", JSON.stringify(studentsError, null, 2));
-  if (officesError) console.error("Offices error:", JSON.stringify(officesError, null, 2));
-  if (evaluationsError) console.error("Evaluations error:", JSON.stringify(evaluationsError, null, 2));
+  if (studentsResult.error) {
+    console.error(
+      "Teacher evaluations - students query failed:",
+      studentsResult.error,
+    );
+  }
 
-  const criticIds = [...new Set((evaluations ?? []).map((e) => e.critic_id))];
+  if (officesResult.error) {
+    console.error(
+      "Teacher evaluations - offices query failed:",
+      officesResult.error,
+    );
+  }
 
-  const { data: critics, error: criticsError } =
+  if (evaluationsResult.error) {
+    console.error(
+      "Teacher evaluations - evaluations query failed:",
+      evaluationsResult.error,
+    );
+  }
+
+  const students = studentsResult.data ?? [];
+  const offices = officesResult.data ?? [];
+  const evaluations = evaluationsResult.data ?? [];
+
+  const criticIds = [
+    ...new Set(
+      evaluations
+        .map((evaluation) => evaluation.critic_id)
+        .filter((criticId): criticId is string => Boolean(criticId)),
+    ),
+  ];
+
+  const criticsResult =
     criticIds.length > 0
       ? await supabase
           .from("critics")
@@ -80,23 +146,38 @@ export default async function TeacherEvaluationsPage() {
           .in("id", criticIds)
       : { data: [], error: null };
 
-  if (criticsError) console.error("Critics error:", JSON.stringify(criticsError, null, 2));
+  if (criticsResult.error) {
+    console.error(
+      "Teacher evaluations - critics query failed:",
+      criticsResult.error,
+    );
+  }
 
-  const studentsById = new Map((students ?? []).map((s) => [s.id, s]));
-  const officesById = new Map((offices ?? []).map((o) => [o.id, o]));
-  const evaluationsByAssignmentId = new Map(
-    (evaluations ?? []).map((e) => [e.assignment_id, e])
+  const critics = criticsResult.data ?? [];
+
+  const studentsById = new Map(
+    students.map((student) => [student.id, student]),
   );
-  const criticsById = new Map((critics ?? []).map((c) => [c.id, c]));
+  const officesById = new Map(offices.map((office) => [office.id, office]));
+  const evaluationsByAssignmentId = new Map(
+    evaluations.map((evaluation) => [evaluation.assignment_id, evaluation]),
+  );
+  const criticsById = new Map(critics.map((critic) => [critic.id, critic]));
 
   const rows = safeAssignments.map((assignment) => {
     const student = studentsById.get(assignment.student_id);
     const office = officesById.get(assignment.office_id);
-    const evaluation = evaluationsByAssignmentId.get(assignment.id);
-    const critic = evaluation ? criticsById.get(evaluation.critic_id) : null;
+    const evaluation = evaluationsByAssignmentId.get(assignment.id) ?? null;
+    const critic = evaluation
+      ? (criticsById.get(evaluation.critic_id) ?? null)
+      : null;
 
     return {
-      assignment,
+      assignment: {
+        id: assignment.id,
+        status: assignment.status,
+        assigned_hours: assignment.assigned_hours,
+      },
       student: {
         id: assignment.student_id,
         student_number: student?.student_number ?? null,
@@ -111,7 +192,7 @@ export default async function TeacherEvaluationsPage() {
         id: assignment.office_id,
         name: office?.name ?? "No office assigned",
       },
-      evaluation: evaluation ?? null,
+      evaluation,
       critic: critic
         ? {
             id: critic.id,
