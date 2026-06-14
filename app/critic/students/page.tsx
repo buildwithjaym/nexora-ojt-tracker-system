@@ -1,252 +1,349 @@
-"use client"
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
 import {
-  AlertCircle,
-  GraduationCap,
-  Star,
+  Search,
+  Clock,
+  CheckCircle2,
+  ClipboardCheck,
+  UserCircle2,
 } from "lucide-react";
 
-// Types
-type PageProps = { params: { studentId: string } };
+/**
+ * ROW TYPE
+ */
+type Row = {
+  assignment_id: string;
+  student_id: string;
 
-// Helpers
-function fullName(student?: any) {
-  if (!student) return "-";
-  return [student.first_name, student.middle_name, student.last_name, student.suffix]
-    .filter(Boolean)
-    .join(" ");
-}
+  student_name: string;
+  student_number: string;
 
-function getInitials(name: string) {
-  if (!name) return "";
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("")
-    .toUpperCase();
-}
+  avatar_url: string | null;
 
-function resolveAvatarUrl(supabaseUrl: string, avatarUrl?: string) {
-  if (!avatarUrl) return null;
-  if (avatarUrl.startsWith("http")) return avatarUrl;
-  return `${supabaseUrl}/storage/v1/object/public/profile-avatars/${avatarUrl.replace(/^\/+/, "")}`;
-}
+  completed_hours: number;
+  required_hours: number;
 
-export default async function StudentDetailPage({ params }: PageProps) {
-  const supabase = await createClient();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const studentId = params.studentId;
+  evaluated: boolean;
+};
 
-  // Fetch current user
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+/**
+ * PAGE
+ */
+export default function CriticStudentsPage() {
+  const supabase = createClient();
 
-  // Fetch critic
-  const { data: critic } = await supabase
-    .from("critics")
-    .select("id, office_id")
-    .eq("profile_id", user.id)
-    .eq("status", "active")
-    .single();
+  const [rows, setRows] = useState<Row[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  if (!critic) redirect("/login");
+  /**
+   * FETCH ASSIGNMENTS
+   */
+  const fetchData = useCallback(async () => {
+    setLoading(true);
 
-  // Fetch student assignment + evaluation
-  const { data: assignment, error } = await supabase
-    .from("assignments")
-    .select(`
-      id,
-      status,
-      start_date,
-      end_date,
-      students:student_id (
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data: critic } = await supabase
+      .from("critics")
+      .select("id, office_id")
+      .eq("profile_id", user.id)
+      .single();
+
+    if (!critic) return;
+
+    const { data: assignments } = await supabase
+      .from("assignments")
+      .select(`
         id,
-        student_number,
-        first_name,
-        middle_name,
-        last_name,
-        suffix,
-        email,
-        phone,
-        completed_hours,
-        required_hours,
+        student_id,
         status,
-        profiles:profile_id (
-          id,
-          avatar_url
+
+        students:student_id (
+          first_name,
+          middle_name,
+          last_name,
+          student_number,
+          completed_hours,
+          required_hours,
+
+          profiles:profile_id (
+            avatar_url
+          )
         ),
-        batches:batch_id (
-          name,
-          course
+
+        evaluations (
+          id,
+          critic_id,
+          assignment_id
         )
-      ),
-      evaluations (
-        id,
-        practicum_grade,
-        average_rating,
-        assertiveness,
-        tact_ethics,
-        courtesy_ethics,
-        accepts_criticism,
-        written_communication,
-        oral_communication,
-        active_listening,
-        learning_ability,
-        computer_knowledge,
-        potential_growth,
-        sound_judgment,
-        theory_integration,
-        output_quality,
-        task_timeliness,
-        attire,
-        decorum,
-        self_confidence,
-        enthusiasm,
-        recommendation,
-        submitted_at
-      )
-    `)
-    .eq("office_id", critic.office_id)
-    .eq("students.id", studentId)
-    .single();
+      `)
+      .eq("office_id", critic.office_id)
+      .in("status", ["pending", "active", "completed"]);
 
-  if (error || !assignment) throw new Error("Student assignment not found.");
+    const mapped: Row[] =
+      assignments?.map((a: any) => {
+        const s = Array.isArray(a.students)
+          ? a.students[0]
+          : a.students;
 
-  // Safe extraction
-  const student = assignment.students?.[0] ?? null;
-  const profile = student?.profiles?.[0] ?? null;
-  const batch = student?.batches?.[0] ?? null;
-  const evaluation = assignment.evaluations?.[0] ?? null;
+        const profile = Array.isArray(s?.profiles)
+          ? s?.profiles[0]
+          : s?.profiles;
 
-  // Plain object to pass to client
-  const plainData = JSON.parse(JSON.stringify({
-    assignment,
-    student,
-    profile,
-    batch,
-    evaluation,
-  }));
+        const evaluation =
+          Array.isArray(a.evaluations)
+            ? a.evaluations.find(
+                (e: any) =>
+                  e.critic_id === critic.id &&
+                  e.assignment_id === a.id
+              )
+            : a.evaluations;
 
-  return <StudentDetailClient data={plainData} supabaseUrl={supabaseUrl} />;
-}
+        const name =
+          [
+            s?.first_name,
+            s?.middle_name,
+            s?.last_name,
+          ]
+            .filter(Boolean)
+            .join(" ") || "Unnamed Student";
 
-// Client Component
-function StudentDetailClient({ data, supabaseUrl }: any) {
-  const { assignment, student, profile, batch, evaluation } = data;
+        return {
+          assignment_id: a.id,
+          student_id: a.student_id,
 
-  const name = fullName(student);
-  const initials = getInitials(name);
-  const completed = Number(student?.completed_hours ?? 0);
-  const required = Number(student?.required_hours ?? 0);
-  const remaining = Math.max(required - completed, 0);
-  const progress = required > 0 ? Math.min(Math.round((completed / required) * 100), 100) : 0;
-  const ready = completed >= required;
-  const avatarUrl = resolveAvatarUrl(supabaseUrl, profile?.avatar_url);
+          student_name: name,
+          student_number: s?.student_number || "—",
+
+          avatar_url: profile?.avatar_url ?? null,
+
+          completed_hours: Number(
+            s?.completed_hours ?? 0
+          ),
+          required_hours: Number(
+            s?.required_hours ?? 0
+          ),
+
+          evaluated: !!evaluation,
+        };
+      }) ?? [];
+
+    setRows(mapped);
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  /**
+   * FILTER
+   */
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    if (!q) return rows;
+
+    return rows.filter(
+      (r) =>
+        r.student_name
+          .toLowerCase()
+          .includes(q) ||
+        r.student_number
+          .toLowerCase()
+          .includes(q)
+    );
+  }, [rows, search]);
+
+  /**
+   * STATUS ENGINE
+   */
+  const grouped = useMemo(() => {
+    const ongoing = filtered.filter(
+      (r) => !r.evaluated && r.completed_hours < r.required_hours
+    );
+
+    const ready = filtered.filter(
+      (r) => !r.evaluated && r.completed_hours >= r.required_hours
+    );
+
+    const submitted = filtered.filter(
+      (r) => r.evaluated
+    );
+
+    return { ongoing, ready, submitted };
+  }, [filtered]);
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
+    <div className="space-y-6 p-4 lg:p-8">
+      {/* HEADER */}
       <div>
-        <p className="text-sm text-muted-foreground">Student Overview</p>
-        <h2 className="text-2xl font-semibold tracking-tight">{name}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {student?.student_number ?? "-"} • {batch?.course ?? "-"} • {batch?.name ?? "-"}
+        <h1 className="text-2xl font-bold">
+          Student Evaluation Feed
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Scroll through assigned students and evaluate when ready
         </p>
       </div>
 
-      {/* Avatar + Progress */}
-      <div className="rounded-3xl border border-border bg-card p-6 space-y-4">
-        <div className="flex items-center gap-4">
-          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 text-xl font-bold text-primary overflow-hidden">
-            {avatarUrl ? <img src={avatarUrl} className="h-full w-full object-cover" /> : initials}
-          </div>
-          <div className="flex flex-col gap-1">
-            <p className="font-semibold">{name}</p>
-            <p className="text-sm text-muted-foreground">{student?.student_number}</p>
-            <p className="text-xs text-muted-foreground">Completed: {completed} / {required} hours</p>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-semibold">OJT Completion</p>
-            <p className="text-sm font-bold">{progress}%</p>
-          </div>
-          <div className="h-3 w-full overflow-hidden rounded-full bg-muted">
-            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-
-        {/* MiniStats */}
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <MiniStat label="Completed" value={completed.toFixed(2)} />
-          <MiniStat label="Required" value={required.toFixed(2)} />
-          <MiniStat label="Remaining" value={ready ? "0.00" : remaining.toFixed(2)} />
-        </div>
-
-        {/* Evaluation */}
-        {evaluation && <EvaluationDetails evaluation={evaluation} />}
-        {!evaluation && !ready && (
-          <div className="mt-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-600 flex gap-2 items-center">
-            <AlertCircle className="h-4 w-4 shrink-0" /> Needs {remaining.toFixed(2)} more hours before evaluation.
-          </div>
-        )}
-        {!evaluation && ready && (
-          <div className="mt-2 rounded-2xl border border-primary/20 bg-primary/5 p-3 text-xs text-primary">
-            Student ready for evaluation.
-          </div>
-        )}
+      {/* SEARCH */}
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Input
+          className="pl-10"
+          placeholder="Search student..."
+          value={search}
+          onChange={(e) =>
+            setSearch(e.target.value)
+          }
+        />
       </div>
+
+      {/* LOADING */}
+      {loading ? (
+        <div className="h-24 animate-pulse rounded-xl bg-muted" />
+      ) : (
+        <div className="space-y-10">
+          <FeedSection
+            title="Ongoing"
+            color="yellow"
+            icon={<Clock className="h-4 w-4" />}
+            data={grouped.ongoing}
+          />
+
+          <FeedSection
+            title="Ready for Evaluation"
+            color="green"
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            data={grouped.ready}
+          />
+
+          <FeedSection
+            title="Submitted"
+            color="blue"
+            icon={<ClipboardCheck className="h-4 w-4" />}
+            data={grouped.submitted}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-border bg-background p-3 text-center">
-      <p className="truncate text-base font-bold">{value}</p>
-      <p className="mt-1 text-[11px] text-muted-foreground">{label}</p>
-    </div>
-  );
-}
-
-function EvaluationDetails({ evaluation }: any) {
-  const factors = [
-    "assertiveness",
-    "tact_ethics",
-    "courtesy_ethics",
-    "accepts_criticism",
-    "written_communication",
-    "oral_communication",
-    "active_listening",
-    "learning_ability",
-    "computer_knowledge",
-    "potential_growth",
-    "sound_judgment",
-    "theory_integration",
-    "output_quality",
-    "task_timeliness",
-    "attire",
-    "decorum",
-    "self_confidence",
-    "enthusiasm",
-  ];
+/**
+ * FEED SECTION
+ */
+function FeedSection({
+  title,
+  icon,
+  data,
+  color,
+}: any) {
+  const border =
+    color === "yellow"
+      ? "border-yellow-500"
+      : color === "green"
+      ? "border-green-500"
+      : "border-blue-500";
 
   return (
-    <div className="mt-4 rounded-2xl border border-green-500/20 bg-green-500/10 p-3 text-green-600 text-xs space-y-2">
-      <p className="font-semibold">Practicum Grade: {evaluation?.practicum_grade}</p>
-      <p className="font-semibold">Average Rating: {evaluation?.average_rating}</p>
-      <p className="font-semibold">Recommendation: {evaluation?.recommendation}</p>
-      <p className="font-semibold mt-2">Job Factors:</p>
-      <ul className="list-disc list-inside space-y-1">
-        {factors.map((f) => (
-          <li key={f}>{f.replace(/_/g, " ")}: {evaluation[f]}</li>
-        ))}
-      </ul>
+    <div>
+      <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+        {icon}
+        {title}
+      </div>
+
+      {data.length === 0 ? (
+        <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No students in this section.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {data.map((s: Row) => (
+            <Card
+              key={s.assignment_id}
+              className={`border-l-4 ${border} rounded-2xl`}
+            >
+              <CardContent className="p-5">
+                {/* CENTER PROFILE LAYOUT (Facebook style) */}
+                <div className="flex flex-col items-center text-center space-y-3">
+                  {/* AVATAR CENTER */}
+                  <div className="h-20 w-20 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                    {s.avatar_url ? (
+                      <img
+                        src={s.avatar_url}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <UserCircle2 className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+
+                  {/* NAME */}
+                  <div>
+                    <p className="text-base font-semibold">
+                      {s.student_name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {s.student_number}
+                    </p>
+                  </div>
+
+                  {/* PROGRESS */}
+                  <div className="w-full max-w-xs">
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary"
+                        style={{
+                          width: `${Math.min(
+                            (s.completed_hours /
+                              s.required_hours) *
+                              100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {s.completed_hours} / {s.required_hours} hrs
+                    </p>
+                  </div>
+
+                  {/* ACTION */}
+                  <div className="pt-2">
+                    {s.evaluated ? (
+                      <span className="text-xs text-blue-600 font-medium">
+                        Submitted
+                      </span>
+                    ) : s.completed_hours >=
+                      s.required_hours ? (
+                      <Button size="sm">
+                        Evaluate
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-yellow-600">
+                        Ongoing
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
