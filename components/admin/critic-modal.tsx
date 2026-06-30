@@ -21,6 +21,7 @@ type Critic = {
   email: string;
   phone: string | null;
   position: string | null;
+  department: string | null;
   status: string;
 };
 
@@ -269,6 +270,15 @@ export function CriticModal({ mode, offices, critic }: CriticModalProps) {
                     />
                   </Field>
 
+                  <Field label="Department">
+                    <input
+                      name="department"
+                      defaultValue={critic?.department ?? ""}
+                      placeholder="Department"
+                      className="input-style"
+                    />
+                  </Field>
+
                   <Field label="Position">
                     <input
                       name="position"
@@ -330,8 +340,8 @@ export function CriticModal({ mode, offices, critic }: CriticModalProps) {
                       ? "Updating..."
                       : "Creating..."
                     : isEdit
-                    ? "Update Critic"
-                    : "Create Critic"}
+                      ? "Update Critic"
+                      : "Create Critic"}
                 </button>
               </div>
             </form>
