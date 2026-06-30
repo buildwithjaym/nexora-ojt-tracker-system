@@ -86,6 +86,7 @@ export async function createCritic(
   const email = cleanText(formData.get("email")).toLowerCase();
   const phone = cleanText(formData.get("phone"));
   const position = toNullable(cleanText(formData.get("position")));
+  const department = toNullable(cleanText(formData.get("department")));
   const office_id = cleanText(formData.get("office_id"));
   const status = cleanText(formData.get("status")) || "active";
 
@@ -193,6 +194,7 @@ export async function createCritic(
     email,
     phone: toNullable(phone),
     position,
+    department,
     status,
   });
 
@@ -228,6 +230,7 @@ export async function updateCritic(
   const email = cleanText(formData.get("email")).toLowerCase();
   const phone = cleanText(formData.get("phone"));
   const position = toNullable(cleanText(formData.get("position")));
+  const department = toNullable(cleanText(formData.get("department")));
   const office_id = cleanText(formData.get("office_id"));
   const status = cleanText(formData.get("status")) || "active";
 
@@ -284,6 +287,7 @@ export async function updateCritic(
       email,
       phone: toNullable(phone),
       position,
+      department,
       status,
     })
     .eq("id", criticId);
