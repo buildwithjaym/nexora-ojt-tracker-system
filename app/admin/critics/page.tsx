@@ -42,6 +42,7 @@ export default async function AdminCriticsPage({ searchParams }: PageProps) {
       email,
       phone,
       position,
+      department,
       status,
       created_at,
       offices (
@@ -57,7 +58,7 @@ export default async function AdminCriticsPage({ searchParams }: PageProps) {
 
   if (q) {
     criticsQuery = criticsQuery.or(
-      `first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,position.ilike.%${q}%`
+      `first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,position.ilike.%${q}%, department.ilike.%${q}%`
     );
   }
 
@@ -155,6 +156,9 @@ export default async function AdminCriticsPage({ searchParams }: PageProps) {
                   Position
                 </th>
                 <th className="px-7 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Department
+                </th>
+                <th className="px-7 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Status
                 </th>
                 <th className="px-7 py-4 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -217,6 +221,9 @@ export default async function AdminCriticsPage({ searchParams }: PageProps) {
                     <td className="px-7 py-5 text-muted-foreground">
                       {critic.position ?? "Not specified"}
                     </td>
+                    <td className="px-7 py-5 text-muted-foreground">
+                      {critic.department ?? "Not specified"}
+                    </td>
 
                     <td className="px-7 py-5">
                       <span className="rounded-full border border-border bg-background px-3 py-1 text-xs font-medium capitalize">
@@ -242,7 +249,7 @@ export default async function AdminCriticsPage({ searchParams }: PageProps) {
               {(!critics || critics.length === 0) && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-7 py-14 text-center text-muted-foreground"
                   >
                     No critics found.
